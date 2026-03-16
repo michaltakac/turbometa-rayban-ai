@@ -178,15 +178,13 @@ Before using TurboMeta, you **MUST** enable developer mode in Meta AI App:
 
 ## 📖 Introduction
 
-TurboMeta is a full-featured multimodal AI assistant built exclusively for RayBan Meta smart glasses, powered by Alibaba Cloud's Qwen multimodal AI models:
+TurboMeta is a full-featured multimodal AI assistant built exclusively for RayBan Meta smart glasses, powered by Google Gemini Live and OpenRouter AI models:
 
-- 🎯 **Live AI Conversations**: Real-time multimodal interaction through glasses camera and microphone
+- 🎯 **Live AI Conversations**: Real-time multimodal interaction through glasses camera and microphone via Google Gemini Live
 - 🍎 **Smart Nutrition Analysis**: Capture food photos and get detailed nutritional information and health recommendations
 - 👁️ **Image Recognition**: Intelligently identify objects, scenes, and text in your field of view
-- 🎥 **Live Streaming**: Stream directly to platforms like Douyin, Kuaishou, and Xiaohongshu
-- 🌐 **Full Chinese Support**: Complete Chinese AI interaction experience, perfectly tailored for Chinese users
-
-This is the world's first **fully Chinese-enabled** RayBan Meta AI assistant, bringing the convenience of smart glasses to Chinese-speaking users.
+- 🎥 **Live Streaming**: Stream directly to platforms like YouTube, Twitch, and more
+- 🌐 **Multi-Language Support**: Full English interface with support for multiple languages
 
 ## ✨ Core Features
 
@@ -194,14 +192,14 @@ This is the world's first **fully Chinese-enabled** RayBan Meta AI assistant, br
 - **Siri Wake-up**: Voice-triggered recognition without unlocking your phone
 - **Shortcuts Integration**: Supports iOS Shortcuts automation
 - **Action Button Support**: One-tap trigger on iPhone 15 Pro series
-- **High-quality TTS**: Voice announcement powered by qwen3-tts-flash
-- **Smart Recognition**: Based on qwen3-vl-plus multimodal visual understanding
+- **High-quality TTS**: Voice announcement via system TTS
+- **Smart Recognition**: Based on qwen/qwen-vl-plus via OpenRouter
 
 ### 🤖 Live AI - Real-time Conversations
 - **Multimodal Interaction**: Simultaneous voice and visual input support
-- **Real-time Response**: Based on Qwen Omni-Realtime model with low-latency voice conversations
-- **Scene Understanding**: AI can see what's in front of you and provide relevant suggestions
-- **Natural Responses**: Smooth and natural Chinese conversation experience
+- **Real-time Response**: Powered by Google Gemini 2.5 Flash Native Audio with low-latency voice conversations
+- **Scene Understanding**: AI can see what's in front of you (continuous 1 FPS video stream) and provide relevant suggestions
+- **Natural Responses**: Smooth and natural conversation experience
 - **One-tap Hide**: Support for hiding conversation interface to focus on visual experience
 
 ### 🍽️ LeanEat - Smart Nutrition Analysis
@@ -237,9 +235,9 @@ This is the world's first **fully Chinese-enabled** RayBan Meta AI assistant, br
 - **UI**: Material 3 Design
 
 ### AI Models
-- **Qwen Omni-Realtime**: Real-time multimodal conversations
-- **Qwen VL-Plus**: Visual understanding and image analysis
-- **Qwen TTS-Flash**: High-quality Chinese text-to-speech
+- **Google Gemini 2.5 Flash Native Audio**: Real-time multimodal conversations (Live AI, Live Translate)
+- **Qwen VL-Plus via OpenRouter**: Visual understanding and image analysis (Quick Vision, LeanEat)
+- **System TTS**: Text-to-speech for Quick Vision announcements
 
 ## 📋 Requirements
 
@@ -250,16 +248,17 @@ This is the world's first **fully Chinese-enabled** RayBan Meta AI assistant, br
 
 ### Software Requirements
 - ✅ Meta View App / Meta AI App (for pairing glasses)
-- ✅ Alibaba Cloud account (for API access)
+- ✅ OpenRouter account (for Vision API access)
+- ✅ Google AI Studio account (for Gemini Live API access)
 - ✅ Xcode 15.0+ (iOS development)
 - ✅ Android Studio (Android development)
 
 ### API Requirements
-You need to apply for the following Alibaba Cloud APIs:
-1. **Qwen Omni-Realtime API**: For real-time conversations
-2. **Qwen VL-Plus API**: For image recognition and nutrition analysis
+You need the following API keys:
+1. **OpenRouter API Key**: For Quick Vision and LeanEat (image recognition and nutrition analysis)
+2. **Google Gemini API Key**: For Live AI real-time conversations and Live Translate
 
-👉 [Apply for APIs at Alibaba Cloud Model Studio](https://www.alibabacloud.com/zh/product/modelstudio) | [Model Studio Console](https://bailian.console.alibabacloud.com/)
+👉 [Get OpenRouter API Key](https://openrouter.ai/keys) | [Get Google Gemini API Key](https://aistudio.google.com/apikey)
 
 ## 🚀 Installation Guide
 
@@ -273,15 +272,16 @@ You need to apply for the following Alibaba Cloud APIs:
 4. **Tap the version number 5 times consecutively**
 5. You'll see a "Developer mode enabled" message
 
-### Step 2: Configure API Key
+### Step 2: Configure API Keys
 
 For detailed configuration guide, see 👉 [API Key Configuration](#api-key-config)
 
 Quick steps:
-1. Visit [Alibaba Cloud Model Studio](https://www.alibabacloud.com/zh/product/modelstudio) to register
-2. Login to [Model Studio Console](https://bailian.console.alibabacloud.com/) → API-KEY Management → Create API Key
-3. Enter your API Key in App "Settings" → "API Key Management"
-4. **International users**: Select **Singapore** region in "Settings" for better connectivity
+1. Get an **OpenRouter API Key** at [openrouter.ai/keys](https://openrouter.ai/keys)
+2. Get a **Google Gemini API Key** at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (enable billing for Live API)
+3. Open TurboMeta App → "**Settings**" → "**API Key Management**"
+4. Enter your OpenRouter API Key under the OpenRouter section
+5. Enter your Google API Key under the Google Gemini section
 
 ### Step 3: Build the Project
 
@@ -338,7 +338,7 @@ ios-deploy --bundle YourApp.app
 - Ask "What do you see?" to have AI describe the scene
 - AI responds in concise Chinese
 
-> ⚠️ **International Users**: In Settings → API Key Management, select **Singapore** region for Live AI. This uses the international WebSocket endpoint (`wss://dashscope-intl.aliyuncs.com`) for better connectivity outside China mainland.
+> ⚠️ **Note**: Live AI requires a Google Gemini API key with billing enabled. Configure it in Settings → API Key Management under the Google Gemini section.
 
 ### LeanEat Nutrition Analysis
 
@@ -468,25 +468,14 @@ Siri/Shortcut Trigger
 
 ### API Configuration
 
-Configure in `VisionAPIConfig.swift`:
+API keys are managed in-app via **Settings → API Key Management**. No hardcoded keys needed.
 
-```swift
-struct VisionAPIConfig {
-    // Alibaba Cloud API Key
-    static let apiKey = "sk-YOUR-API-KEY-HERE"
-
-    // API Base URL (usually doesn't need modification)
-    static let baseURL = "https://dashscope.aliyuncs.com"
-}
-```
+- **OpenRouter**: Used for Quick Vision (image recognition) and LeanEat (nutrition analysis). Default model: `qwen/qwen-vl-plus`
+- **Google Gemini**: Used for Live AI (real-time conversations) and Live Translate. Default model: `gemini-2.5-flash-native-audio-preview-12-2025`
 
 ### System Prompts
 
-Customize AI response style in `OmniRealtimeService.swift`:
-
-```swift
-"instructions": "You are a RayBan Meta smart glasses AI assistant. Keep answers concise and conversational..."
-```
+Customize AI response style in `LiveAIModeManager.swift` or via the in-app Live AI settings.
 
 ## 🔧 Troubleshooting
 
@@ -503,8 +492,8 @@ Customize AI response style in `OmniRealtimeService.swift`:
 
 **Solutions**:
 1. Check if internet connection is stable
-2. Verify API Key is correctly configured
-3. Check if Alibaba Cloud API quota is sufficient
+2. Verify API Keys are correctly configured (OpenRouter for Vision, Google for Live AI)
+3. Ensure Google Gemini billing is enabled (required for Live API)
 4. Review console logs for errors
 
 ### Q3: Nutrition analysis results inaccurate?
@@ -529,7 +518,7 @@ Customize AI response style in `OmniRealtimeService.swift`:
 1. Ensure environment is relatively quiet
 2. Speak clearly at moderate speed
 3. Don't obstruct the microphone
-4. Currently optimized for Chinese, other languages may be less accurate
+4. Works best with English; other languages depend on the model's capabilities
 
 ## 🔒 Privacy and Security
 
@@ -591,7 +580,8 @@ Please see [LICENSE](LICENSE) file for details.
 ## 🙏 Acknowledgments
 
 - **Meta Platforms, Inc.** - For providing DAT SDK and original sample code
-- **Alibaba Cloud Qwen Team** - For powerful multimodal AI capabilities
+- **Google** - For Gemini Live API with real-time multimodal capabilities
+- **OpenRouter** - For unified access to AI vision models
 - **RayBan** - For excellent smart glasses hardware
 
 ## 🚀 How to Open Source This Project
@@ -662,21 +652,23 @@ This project is based on Meta DAT SDK sample code and follows the original proje
 <a id="api-key-config"></a>
 ### 5. User Configuration Instructions
 
-⚠️ **Important Notice**: Users need to configure Alibaba Cloud API Key:
+⚠️ **Important Notice**: Users need to configure API keys for OpenRouter and Google Gemini:
 
-#### Step 1: Register Alibaba Cloud Account
-Visit [Alibaba Cloud Model Studio](https://www.alibabacloud.com/zh/product/modelstudio) to register
+#### Step 1: Get OpenRouter API Key
+1. Visit [openrouter.ai/keys](https://openrouter.ai/keys) and create an account
+2. Create a new API key
+3. Add credits to your account
 
-#### Step 2: Get API Key
-1. Login to [Model Studio Console](https://bailian.console.alibabacloud.com/)
-2. Find "**API-KEY Management**" in the left menu
-3. Click "**Create API Key**" to generate a key
-4. Copy the generated API Key
+#### Step 2: Get Google Gemini API Key
+1. Visit [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Create a new API key
+3. **Enable billing** on your Google Cloud project (required for the Gemini Live API)
 
 #### Step 3: Configure in App
 1. Open TurboMeta App
 2. Go to "**Settings**" → "**API Key Management**"
-3. Paste your API Key and save
+3. Enter your **OpenRouter API Key** (for Quick Vision and LeanEat)
+4. Enter your **Google Gemini API Key** (for Live AI and Live Translate)
 
 > 🔒 **Security Note**: API Key is stored in iOS Keychain and Android EncryptedSharedPreferences, never exposed
 

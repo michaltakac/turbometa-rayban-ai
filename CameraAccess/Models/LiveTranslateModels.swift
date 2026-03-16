@@ -19,6 +19,7 @@ enum TranslateLanguage: String, CaseIterable, Codable, Identifiable {
     case es = "es"      // Spanish
     case pt = "pt"      // Portuguese
     case it = "it"      // Italian
+    case sk = "sk"      // Slovak
     case yue = "yue"    // Cantonese
 
     // Input only (as source language)
@@ -44,6 +45,7 @@ enum TranslateLanguage: String, CaseIterable, Codable, Identifiable {
         case .es: return "livetranslate.lang.es".localized
         case .pt: return "livetranslate.lang.pt".localized
         case .it: return "livetranslate.lang.it".localized
+        case .sk: return "livetranslate.lang.sk".localized
         case .yue: return "livetranslate.lang.yue".localized
         case .id: return "livetranslate.lang.id".localized
         case .vi: return "livetranslate.lang.vi".localized
@@ -67,6 +69,7 @@ enum TranslateLanguage: String, CaseIterable, Codable, Identifiable {
         case .es: return "🇪🇸"
         case .pt: return "🇵🇹"
         case .it: return "🇮🇹"
+        case .sk: return "🇸🇰"
         case .yue: return "🇭🇰"
         case .id: return "🇮🇩"
         case .vi: return "🇻🇳"
@@ -81,7 +84,7 @@ enum TranslateLanguage: String, CaseIterable, Codable, Identifiable {
     /// Whether this language is supported as a target language (audio + text output)
     var supportsAudioOutput: Bool {
         switch self {
-        case .en, .zh, .ja, .ko, .fr, .de, .ru, .es, .pt, .it, .yue:
+        case .en, .zh, .ja, .ko, .fr, .de, .ru, .es, .pt, .it, .sk, .yue:
             return true
         case .id, .vi, .th, .ar, .hi, .el, .tr:
             return false
@@ -144,7 +147,7 @@ enum TranslateVoice: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .cherry, .nofish:
             // Supports multiple languages
-            return [.zh, .en, .fr, .de, .ru, .it, .es, .pt, .ja, .ko]
+            return [.zh, .en, .fr, .de, .ru, .it, .sk, .es, .pt, .ja, .ko]
         case .jada, .dylan, .sunny, .peter, .eric:
             // Chinese only
             return [.zh]
