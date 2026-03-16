@@ -33,23 +33,23 @@ struct MainAppView: View {
 
   var body: some View {
     if viewModel.registrationState == .registered || viewModel.hasMockDevice {
-      // 已注册/连接设备
+      // Registered/device connected
       if !hasCheckedPermissions {
-        // 首次启动，请求权限
+        // First launch, request permissions
         PermissionsRequestView { granted in
           permissionsGranted = granted
           hasCheckedPermissions = true
         }
       } else {
-        // 权限已检查，显示主界面
+        // Permissions checked, show main interface
         MainTabView(streamViewModel: streamViewModel, wearablesViewModel: viewModel)
           .onAppear {
-            // 设置 QuickVisionManager 的 StreamViewModel 引用
+            // Set QuickVisionManager's StreamViewModel reference
             quickVisionManager.setStreamViewModel(streamViewModel)
           }
       }
     } else {
-      // 未注册 - 显示注册/引导流程
+      // Not registered - show registration/onboarding flow
       HomeScreenView(viewModel: viewModel)
     }
   }

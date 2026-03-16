@@ -40,7 +40,7 @@ class VisionAPIService(
 
         // Default Models
         const val DEFAULT_ALIBABA_MODEL = "qwen-vl-plus"
-        const val DEFAULT_OPENROUTER_MODEL = "google/gemini-3-flash-preview"
+        const val DEFAULT_OPENROUTER_MODEL = "qwen/qwen-vl-plus"
     }
 
     private val client = OkHttpClient.Builder()
@@ -155,14 +155,14 @@ class VisionAPIService(
     private fun getQuickVisionPrompt(language: String): String {
         return when (language) {
             "zh-CN" -> """
-                你是一个智能眼镜AI助手。请用简洁的中文描述图片内容，适合语音播报。
+                You are a smart glasses AI assistant. Please describe the image content concisely in Chinese, suitable for voice announcement.
 
-                要求：
-                1. 用1-2句话描述主要内容
-                2. 语言自然、口语化
-                3. 不要使用标点符号过多
-                4. 总字数控制在50字以内
-                5. 直接描述，不要说"图片中"或"我看到"
+                Requirements:
+                1. Describe the main content in 1-2 sentences
+                2. Use natural, conversational language
+                3. Don't use too many punctuation marks
+                4. Keep the total under 50 characters
+                5. Describe directly, don't say "in the image" or "I see"
             """.trimIndent()
             "en-US" -> """
                 You are a smart glasses AI assistant. Please describe the image content concisely, suitable for voice announcement.
@@ -175,24 +175,24 @@ class VisionAPIService(
                 5. Describe directly, don't say "in the image" or "I see"
             """.trimIndent()
             "ja-JP" -> """
-                あなたはスマートグラスのAIアシスタントです。画像の内容を簡潔に日本語で説明してください。音声読み上げに適した形式で。
+                You are a smart glasses AI assistant. Please describe the image content concisely in Japanese, suitable for voice announcement.
 
-                要件：
-                1. 1-2文で主要な内容を説明
-                2. 自然で会話的な言葉を使用
-                3. 句読点を多用しない
-                4. 合計50文字以内
-                5. 直接説明し、「画像には」や「見えます」とは言わない
+                Requirements:
+                1. Describe the main content in 1-2 sentences
+                2. Use natural, conversational language
+                3. Don't use too many punctuation marks
+                4. Keep the total under 50 characters
+                5. Describe directly, don't say "in the image" or "I see"
             """.trimIndent()
             "ko-KR" -> """
-                당신은 스마트 안경 AI 어시스턴트입니다. 이미지 내용을 간결한 한국어로 설명해 주세요. 음성 안내에 적합하게.
+                You are a smart glasses AI assistant. Please describe the image content concisely in Korean, suitable for voice announcement.
 
-                요구사항:
-                1. 1-2문장으로 주요 내용 설명
-                2. 자연스럽고 대화체로
-                3. 구두점을 많이 사용하지 않음
-                4. 총 50자 이내
-                5. 직접 설명하고, "이미지에는"이나 "보입니다"라고 말하지 않음
+                Requirements:
+                1. Describe the main content in 1-2 sentences
+                2. Use natural, conversational language
+                3. Don't use too many punctuation marks
+                4. Keep the total under 50 characters
+                5. Describe directly, don't say "in the image" or "I see"
             """.trimIndent()
             else -> getQuickVisionPrompt("en-US")
         }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Quick Vision Mode Manager
- * 快速识图模式管理器 - 管理当前模式、自定义提示词、翻译目标语言
+ * Quick vision mode manager - manages current mode, custom prompts, translation target language
  */
 class QuickVisionModeManager private constructor(private val context: Context) {
 
@@ -29,9 +29,9 @@ class QuickVisionModeManager private constructor(private val context: Context) {
             }
         }
 
-        // 支持的翻译目标语言
+        // Supported translation target languages
         val supportedLanguages: List<Pair<String, String>> = listOf(
-            "zh-CN" to "中文",
+            "zh-CN" to "Chinese",
             "en-US" to "English",
             "ja-JP" to "日本語",
             "ko-KR" to "한국어",
@@ -47,15 +47,15 @@ class QuickVisionModeManager private constructor(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    // 当前模式
+    // Current mode
     private val _currentMode = MutableStateFlow(loadMode())
     val currentMode: StateFlow<QuickVisionMode> = _currentMode.asStateFlow()
 
-    // 自定义提示词
+    // Custom prompt
     private val _customPrompt = MutableStateFlow(loadCustomPrompt())
     val customPrompt: StateFlow<String> = _customPrompt.asStateFlow()
 
-    // 翻译目标语言
+    // Translation target language
     private val _translateTargetLanguage = MutableStateFlow(loadTranslateTargetLanguage())
     val translateTargetLanguage: StateFlow<String> = _translateTargetLanguage.asStateFlow()
 
@@ -88,7 +88,7 @@ class QuickVisionModeManager private constructor(private val context: Context) {
     }
 
     /**
-     * 获取当前模式的完整提示词
+     * Get the full prompt for the current mode
      */
     fun getPrompt(): String {
         return when (_currentMode.value) {
@@ -99,7 +99,7 @@ class QuickVisionModeManager private constructor(private val context: Context) {
     }
 
     /**
-     * 获取指定模式的提示词
+     * Get the prompt for a specified mode
      */
     fun getPrompt(mode: QuickVisionMode): String {
         return when (mode) {
@@ -110,18 +110,18 @@ class QuickVisionModeManager private constructor(private val context: Context) {
     }
 
     /**
-     * 获取翻译模式的提示词（包含目标语言）
+     * Get the prompt for translation mode (includes target language)
      */
     private fun getTranslatePrompt(): String {
-        val targetLanguageName = supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "中文"
+        val targetLanguageName = supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "Chinese"
         val basePrompt = context.getString(R.string.prompt_quickvision_translate)
         return basePrompt.replace("{LANGUAGE}", targetLanguageName)
     }
 
     /**
-     * 获取目标语言名称
+     * Get target language name
      */
     fun getTranslateTargetLanguageName(): String {
-        return supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "中文"
+        return supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "Chinese"
     }
 }

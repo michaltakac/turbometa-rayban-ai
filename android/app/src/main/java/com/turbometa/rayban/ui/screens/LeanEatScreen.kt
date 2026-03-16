@@ -480,9 +480,9 @@ private fun FoodItemRow(
             StatusBadge(
                 text = rating,
                 color = when (rating) {
-                    "优秀" -> HealthExcellent
-                    "良好" -> HealthGood
-                    "一般" -> HealthFair
+                    "Excellent" -> HealthExcellent
+                    "Good" -> HealthGood
+                    "Fair" -> HealthFair
                     else -> HealthPoor
                 }
             )

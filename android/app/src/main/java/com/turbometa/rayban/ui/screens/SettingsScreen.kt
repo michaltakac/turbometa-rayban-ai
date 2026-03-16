@@ -367,7 +367,7 @@ fun SettingsScreen(
 
             // AI Settings Section
             SettingsSection(title = stringResource(R.string.settings_ai)) {
-                // App Language (界面语言)
+                // App Language (UI language)
                 SettingsItem(
                     icon = Icons.Default.Translate,
                     title = stringResource(R.string.settings_applanguage),
@@ -377,7 +377,7 @@ fun SettingsScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = AppSpacing.medium))
 
-                // Output Language (AI输出语言)
+                // Output Language (AI output language)
                 SettingsItem(
                     icon = Icons.Default.Language,
                     title = stringResource(R.string.output_language),

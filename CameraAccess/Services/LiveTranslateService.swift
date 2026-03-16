@@ -1,6 +1,7 @@
 /*
  * Live Translate WebSocket Service
- * 基于 qwen3-livetranslate-flash-realtime 的实时翻译服务
+ * Real-time translation service
+ * Supports Alibaba (qwen3-livetranslate-flash-realtime) and Google Gemini Live
  */
 
 import Foundation
@@ -17,11 +18,18 @@ class LiveTranslateService: NSObject {
 
     // Configuration
     private let apiKey: String
-    private let model = "qwen3-livetranslate-flash-realtime"
-    // 根据用户设置的区域动态获取 WebSocket URL
-    private var baseURL: String {
+    private let provider: LiveAIProvider
+
+    // Alibaba config
+    private let alibabaModel = "qwen3-livetranslate-flash-realtime"
+    private var alibabaBaseURL: String {
         return APIProviderManager.staticLiveAIWebsocketURL
     }
+
+    // Gemini config
+    private let geminiModel = "gemini-2.5-flash-native-audio-preview-12-2025"
+    private let geminiBaseURL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+    private var isGeminiSessionConfigured = false
 
     // Audio Engine (for recording)
     private var audioEngine: AVAudioEngine?
@@ -47,12 +55,14 @@ class LiveTranslateService: NSObject {
 
     // Audio resampling
     private var audioConverter: AVAudioConverter?
+    private var recordConverter: AVAudioConverter?
     private let targetSampleRate: Double = 16000  // API expects 16kHz
+    private let recordTargetFormat = AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1)
 
     // Callbacks
     var onConnected: (() -> Void)?
-    var onTranslationText: ((String) -> Void)?    // 翻译结果文本
-    var onTranslationDelta: ((String) -> Void)?   // 增量翻译文本
+    var onTranslationText: ((String) -> Void)?    // Translation result text
+    var onTranslationDelta: ((String) -> Void)?   // Incremental translation text
     var onAudioDelta: ((Data) -> Void)?
     var onAudioDone: (() -> Void)?
     var onError: ((String) -> Void)?
@@ -60,13 +70,15 @@ class LiveTranslateService: NSObject {
     // State
     private var isRecording = false
     private var eventIdCounter = 0
+    private var hasAudioBeenSent = false
 
     // Image sending
     private var lastImageSendTime: Date?
-    private let imageInterval: TimeInterval = 0.5  // 每0.5秒最多发送一张图片
+    private let imageInterval: TimeInterval = 0.5
 
     init(apiKey: String) {
         self.apiKey = apiKey
+        self.provider = APIProviderManager.staticLiveAIProvider
         super.init()
         setupAudioEngine()
     }
@@ -85,7 +97,7 @@ class LiveTranslateService: NSObject {
         guard let playbackEngine = playbackEngine,
               let playerNode = playerNode,
               let playbackFormat = playbackFormat else {
-            print("❌ [Translate] 无法初始化播放引擎")
+            print("❌ [Translate] Failed to initialize playback engine")
             return
         }
 
@@ -93,7 +105,21 @@ class LiveTranslateService: NSObject {
         playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
         playbackEngine.prepare()
 
-        print("✅ [Translate] 播放引擎初始化完成: Float32 @ 24kHz")
+        print("✅ [Translate] Playback engine initialized: Float32 @ 24kHz")
+    }
+
+    private func configureAudioSession(usePhoneMic: Bool = false) {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            if usePhoneMic {
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+            } else {
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetooth, .defaultToSpeaker])
+            }
+            try audioSession.setActive(true)
+        } catch {
+            print("⚠️ [Translate] Audio session configuration failed: \(error)")
+        }
     }
 
     private func startPlaybackEngine() {
@@ -102,9 +128,9 @@ class LiveTranslateService: NSObject {
         do {
             try playbackEngine.start()
             isPlaybackEngineRunning = true
-            print("▶️ [Translate] 播放引擎已启动")
+            print("▶️ [Translate] Playback engine started")
         } catch {
-            print("❌ [Translate] 播放引擎启动失败: \(error)")
+            print("❌ [Translate] Failed to start playback engine: \(error)")
         }
     }
 
@@ -115,17 +141,25 @@ class LiveTranslateService: NSObject {
         playerNode?.reset()
         playbackEngine.stop()
         isPlaybackEngineRunning = false
-        print("⏹️ [Translate] 播放引擎已停止")
+        print("⏹️ [Translate] Playback engine stopped")
     }
 
     // MARK: - WebSocket Connection
 
     func connect() {
-        let urlString = "\(baseURL)?model=\(model)"
-        print("🔌 [Translate] 准备连接 WebSocket: \(urlString)")
+        switch provider {
+        case .alibaba:
+            connectAlibaba()
+        case .google:
+            connectGemini()
+        }
+    }
+
+    private func connectAlibaba() {
+        let urlString = "\(alibabaBaseURL)?model=\(alibabaModel)"
+        print("🔌 [Translate] Connecting to Alibaba WebSocket: \(urlString)")
 
         guard let url = URL(string: urlString) else {
-            print("❌ [Translate] 无效的 URL")
             onError?("Invalid URL")
             return
         }
@@ -135,26 +169,40 @@ class LiveTranslateService: NSObject {
 
         let configuration = URLSessionConfiguration.default
         urlSession = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue())
-
         webSocket = urlSession?.webSocketTask(with: request)
         webSocket?.resume()
 
-        print("🔌 [Translate] WebSocket 任务已启动")
         receiveMessage()
 
-        // 等待连接后发送配置
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            print("⚙️ [Translate] 准备配置会话")
-            self.configureSession()
+            self.configureAlibabaSession()
         }
     }
 
+    private func connectGemini() {
+        let urlString = "\(geminiBaseURL)?key=\(apiKey)"
+        print("🔌 [Translate] Connecting to Gemini WebSocket")
+
+        guard let url = URL(string: urlString) else {
+            onError?("Invalid URL")
+            return
+        }
+
+        let configuration = URLSessionConfiguration.default
+        urlSession = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue())
+        webSocket = urlSession?.webSocketTask(with: url)
+        webSocket?.resume()
+
+        receiveMessage()
+    }
+
     func disconnect() {
-        print("🔌 [Translate] 断开 WebSocket 连接")
+        print("🔌 [Translate] Disconnecting WebSocket")
         webSocket?.cancel(with: .goingAway, reason: nil)
         webSocket = nil
         stopRecording()
         stopPlaybackEngine()
+        isGeminiSessionConfigured = false
     }
 
     // MARK: - Configuration
@@ -170,13 +218,19 @@ class LiveTranslateService: NSObject {
         self.voice = voice
         self.audioOutputEnabled = audioEnabled
 
-        // 如果已连接，重新配置会话
         if webSocket != nil {
-            configureSession()
+            switch provider {
+            case .alibaba:
+                configureAlibabaSession()
+            case .google:
+                break // Gemini reconfigures on connect
+            }
         }
     }
 
-    private func configureSession() {
+    // MARK: - Alibaba Session Config
+
+    private func configureAlibabaSession() {
         var modalities: [String] = ["text"]
         if audioOutputEnabled {
             modalities.append("audio")
@@ -206,7 +260,53 @@ class LiveTranslateService: NSObject {
         ]
 
         sendEvent(sessionConfig)
-        print("📤 [Translate] 配置会话: \(sourceLanguage.rawValue) → \(targetLanguage.rawValue), 音色: \(voice.rawValue)")
+        print("📤 [Translate] Alibaba session configured: \(sourceLanguage.rawValue) -> \(targetLanguage.rawValue)")
+    }
+
+    // MARK: - Gemini Session Config
+
+    private func configureGeminiSession() {
+        guard !isGeminiSessionConfigured else { return }
+
+        let sourceName = sourceLanguage.displayName
+        let targetName = targetLanguage.displayName
+
+        let instructions = """
+        You are a real-time translator. Listen to the user's speech and translate it.
+        Source language: \(sourceName) (\(sourceLanguage.rawValue))
+        Target language: \(targetName) (\(targetLanguage.rawValue))
+
+        Rules:
+        1. Translate the user's speech into \(targetName) immediately
+        2. Respond ONLY with the translation, no explanations
+        3. Keep translations natural and conversational
+        4. If the user speaks in \(targetName), translate to \(sourceName) instead
+        5. Speak your translations out loud in \(targetName)
+        """
+
+        let setupMessage: [String: Any] = [
+            "setup": [
+                "model": "models/\(geminiModel)",
+                "generation_config": [
+                    "response_modalities": ["AUDIO"],
+                    "speech_config": [
+                        "voice_config": [
+                            "prebuilt_voice_config": [
+                                "voice_name": "Aoede"
+                            ]
+                        ]
+                    ]
+                ],
+                "system_instruction": [
+                    "parts": [
+                        ["text": instructions]
+                    ]
+                ]
+            ]
+        ]
+
+        sendJSON(setupMessage)
+        print("📤 [Translate] Gemini session configured: \(sourceLanguage.rawValue) -> \(targetLanguage.rawValue)")
     }
 
     // MARK: - Audio Recording
@@ -215,49 +315,31 @@ class LiveTranslateService: NSObject {
         guard !isRecording else { return }
 
         do {
-            print("🎤 [Translate] 开始录音, 使用\(usePhoneMic ? "iPhone" : "蓝牙")麦克风")
+            print("🎤 [Translate] Starting recording, using \(usePhoneMic ? "iPhone" : "Bluetooth") microphone")
 
             if let engine = audioEngine, engine.isRunning {
                 engine.stop()
                 engine.inputNode.removeTap(onBus: 0)
             }
 
-            let audioSession = AVAudioSession.sharedInstance()
+            configureAudioSession(usePhoneMic: usePhoneMic)
 
-            if usePhoneMic {
-                // 使用 iPhone 麦克风 - 适合翻译对方说的话
-                try audioSession.setCategory(
-                    .playAndRecord,
-                    mode: .default,
-                    options: [.defaultToSpeaker]  // 不启用蓝牙，强制使用 iPhone 麦克风
-                )
-                print("🎙️ [Translate] 使用 iPhone 麦克风（翻译对方）")
-            } else {
-                // 使用蓝牙麦克风（眼镜）- 适合翻译自己说的话
-                try audioSession.setCategory(
-                    .playAndRecord,
-                    mode: .default,
-                    options: [.allowBluetooth, .defaultToSpeaker]
-                )
-                print("🎙️ [Translate] 使用蓝牙麦克风（翻译自己）")
-            }
-            try audioSession.setActive(true)
-
-            // 打印当前音频输入设备
-            if let inputRoute = audioSession.currentRoute.inputs.first {
-                print("🎙️ [Translate] 当前输入设备: \(inputRoute.portName) (\(inputRoute.portType.rawValue))")
+            if let inputRoute = AVAudioSession.sharedInstance().currentRoute.inputs.first {
+                print("🎙️ [Translate] Current input device: \(inputRoute.portName) (\(inputRoute.portType.rawValue))")
             }
 
             guard let engine = audioEngine else {
-                print("❌ [Translate] 音频引擎未初始化")
+                print("❌ [Translate] Audio engine not initialized")
                 return
             }
 
             let inputNode = engine.inputNode
             let inputFormat = inputNode.outputFormat(forBus: 0)
 
-            print("🎵 [Translate] 输入格式: \(inputFormat.sampleRate) Hz, \(inputFormat.channelCount) channels")
-            print("🎵 [Translate] 目标格式: \(targetSampleRate) Hz (将自动重采样)")
+            // Set up converter for Gemini (needs 16kHz PCM16)
+            if provider == .google, let recordTargetFormat {
+                recordConverter = AVAudioConverter(from: inputFormat, to: recordTargetFormat)
+            }
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, time in
                 self?.processAudioBuffer(buffer)
@@ -267,10 +349,11 @@ class LiveTranslateService: NSObject {
             try engine.start()
 
             isRecording = true
-            print("✅ [Translate] 录音已启动")
+            hasAudioBeenSent = false
+            print("✅ [Translate] Recording started")
 
         } catch {
-            print("❌ [Translate] 启动录音失败: \(error.localizedDescription)")
+            print("❌ [Translate] Failed to start recording: \(error.localizedDescription)")
             onError?("Failed to start recording: \(error.localizedDescription)")
         }
     }
@@ -278,25 +361,77 @@ class LiveTranslateService: NSObject {
     func stopRecording() {
         guard isRecording else { return }
 
-        print("🛑 [Translate] 停止录音")
+        print("🛑 [Translate] Stopping recording")
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         isRecording = false
+        hasAudioBeenSent = false
     }
 
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard let floatChannelData = buffer.floatChannelData else { return }
+        switch provider {
+        case .alibaba:
+            processAudioBufferAlibaba(buffer)
+        case .google:
+            processAudioBufferGemini(buffer, inputFormat: buffer.format)
+        }
+    }
 
+    private func processAudioBufferAlibaba(_ buffer: AVAudioPCMBuffer) {
         let inputSampleRate = buffer.format.sampleRate
 
-        // 如果采样率不是 16kHz，需要重采样
         if inputSampleRate != targetSampleRate {
-            guard let resampledBuffer = resampleBuffer(buffer) else {
-                return
-            }
-            sendBufferAsPCM16(resampledBuffer)
+            guard let resampledBuffer = resampleBuffer(buffer) else { return }
+            sendBufferAsPCM16Alibaba(resampledBuffer)
         } else {
-            sendBufferAsPCM16(buffer)
+            sendBufferAsPCM16Alibaba(buffer)
+        }
+    }
+
+    private func processAudioBufferGemini(_ buffer: AVAudioPCMBuffer, inputFormat: AVAudioFormat) {
+        guard let recordConverter, let recordTargetFormat else { return }
+
+        let ratio = recordTargetFormat.sampleRate / inputFormat.sampleRate
+        let targetFrameCapacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up))
+
+        guard let converted = AVAudioPCMBuffer(pcmFormat: recordTargetFormat, frameCapacity: max(1, targetFrameCapacity)) else {
+            return
+        }
+
+        var hasProvidedInput = false
+        var error: NSError?
+
+        let status = recordConverter.convert(to: converted, error: &error) { _, outStatus in
+            if hasProvidedInput {
+                outStatus.pointee = .noDataNow
+                return nil
+            }
+            hasProvidedInput = true
+            outStatus.pointee = .haveData
+            return buffer
+        }
+
+        guard error == nil, status != .error else { return }
+        guard let floatChannelData = converted.floatChannelData else { return }
+
+        let frameLength = Int(converted.frameLength)
+        let channel = floatChannelData.pointee
+
+        var int16Data = [Int16](repeating: 0, count: frameLength)
+        for i in 0..<frameLength {
+            let sample = channel[i]
+            let clampedSample = max(-1.0, min(1.0, sample))
+            int16Data[i] = Int16(clampedSample * 32767.0)
+        }
+
+        let data = Data(bytes: int16Data, count: frameLength * MemoryLayout<Int16>.size)
+        let base64Audio = data.base64EncodedString()
+
+        sendGeminiRealtimeInput(audioData: base64Audio)
+
+        if !hasAudioBeenSent {
+            hasAudioBeenSent = true
+            print("✅ [Translate] First audio sent to Gemini")
         }
     }
 
@@ -306,17 +441,12 @@ class LiveTranslateService: NSObject {
             return nil
         }
 
-        // 创建或更新 converter
         if audioConverter == nil || audioConverter?.inputFormat != inputFormat {
             audioConverter = AVAudioConverter(from: inputFormat, to: outputFormat)
         }
 
-        guard let converter = audioConverter else {
-            print("❌ [Translate] 无法创建音频转换器")
-            return nil
-        }
+        guard let converter = audioConverter else { return nil }
 
-        // 计算输出帧数
         let ratio = targetSampleRate / inputFormat.sampleRate
         let outputFrameCount = AVAudioFrameCount(Double(inputBuffer.frameLength) * ratio)
 
@@ -333,20 +463,19 @@ class LiveTranslateService: NSObject {
         converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
 
         if let error = error {
-            print("❌ [Translate] 重采样失败: \(error.localizedDescription)")
+            print("❌ [Translate] Resampling failed: \(error.localizedDescription)")
             return nil
         }
 
         return outputBuffer
     }
 
-    private func sendBufferAsPCM16(_ buffer: AVAudioPCMBuffer) {
+    private func sendBufferAsPCM16Alibaba(_ buffer: AVAudioPCMBuffer) {
         guard let floatChannelData = buffer.floatChannelData else { return }
 
         let frameLength = Int(buffer.frameLength)
         let channel = floatChannelData.pointee
 
-        // Float32 → PCM16
         var int16Data = [Int16](repeating: 0, count: frameLength)
         for i in 0..<frameLength {
             let sample = channel[i]
@@ -357,54 +486,54 @@ class LiveTranslateService: NSObject {
         let data = Data(bytes: int16Data, count: frameLength * MemoryLayout<Int16>.size)
         let base64Audio = data.base64EncodedString()
 
-        sendAudioAppend(base64Audio)
+        sendAlibabaAudioAppend(base64Audio)
     }
 
     // MARK: - Image Sending
 
     func sendImageFrame(_ image: UIImage) {
-        // 限制发送频率：每0.5秒最多一张
         let now = Date()
         if let lastTime = lastImageSendTime, now.timeIntervalSince(lastTime) < imageInterval {
             return
         }
         lastImageSendTime = now
 
-        guard let imageData = image.jpegData(compressionQuality: 0.6) else {
-            print("❌ [Translate] 无法压缩图片")
-            return
-        }
-
-        // 限制图片大小 500KB
-        guard imageData.count <= 500 * 1024 else {
-            print("⚠️ [Translate] 图片过大，跳过发送")
-            return
-        }
+        guard let imageData = image.jpegData(compressionQuality: 0.6) else { return }
+        guard imageData.count <= 500 * 1024 else { return }
 
         let base64Image = imageData.base64EncodedString()
-        print("📸 [Translate] 发送图片: \(imageData.count) bytes")
 
-        let event: [String: Any] = [
-            "event_id": generateEventId(),
-            "type": TranslateClientEvent.inputImageBufferAppend.rawValue,
-            "image": base64Image
-        ]
-        sendEvent(event)
+        switch provider {
+        case .alibaba:
+            let event: [String: Any] = [
+                "event_id": generateEventId(),
+                "type": TranslateClientEvent.inputImageBufferAppend.rawValue,
+                "image": base64Image
+            ]
+            sendEvent(event)
+        case .google:
+            let message: [String: Any] = [
+                "realtimeInput": [
+                    "video": [
+                        "data": base64Image,
+                        "mimeType": "image/jpeg"
+                    ]
+                ]
+            ]
+            sendJSON(message)
+        }
     }
 
-    // MARK: - Send Events
+    // MARK: - Send Events (Alibaba)
 
     private func sendEvent(_ event: [String: Any]) {
         guard let jsonData = try? JSONSerialization.data(withJSONObject: event),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
-            print("❌ [Translate] 无法序列化事件")
-            return
-        }
+              let jsonString = String(data: jsonData, encoding: .utf8) else { return }
 
         let message = URLSessionWebSocketTask.Message.string(jsonString)
         webSocket?.send(message) { error in
             if let error = error {
-                print("❌ [Translate] 发送事件失败: \(error.localizedDescription)")
+                print("❌ [Translate] Failed to send event: \(error.localizedDescription)")
                 self.onError?("Send error: \(error.localizedDescription)")
             }
         }
@@ -412,10 +541,10 @@ class LiveTranslateService: NSObject {
 
     private var audioSendCount = 0
 
-    private func sendAudioAppend(_ base64Audio: String) {
+    private func sendAlibabaAudioAppend(_ base64Audio: String) {
         audioSendCount += 1
         if audioSendCount == 1 || audioSendCount % 50 == 0 {
-            print("🎵 [Translate] 发送音频块 #\(audioSendCount), 大小: \(base64Audio.count) bytes")
+            print("🎵 [Translate] Sending audio chunk #\(audioSendCount)")
         }
 
         let event: [String: Any] = [
@@ -426,6 +555,33 @@ class LiveTranslateService: NSObject {
         sendEvent(event)
     }
 
+    // MARK: - Send Events (Gemini)
+
+    private func sendJSON(_ json: [String: Any]) {
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: json),
+              let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+
+        let message = URLSessionWebSocketTask.Message.string(jsonString)
+        webSocket?.send(message) { error in
+            if let error = error {
+                print("❌ [Translate] Gemini send failed: \(error.localizedDescription)")
+                self.onError?("Send error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func sendGeminiRealtimeInput(audioData: String) {
+        let message: [String: Any] = [
+            "realtimeInput": [
+                "audio": [
+                    "data": audioData,
+                    "mimeType": "audio/pcm;rate=16000"
+                ]
+            ]
+        ]
+        sendJSON(message)
+    }
+
     // MARK: - Receive Messages
 
     private func receiveMessage() {
@@ -434,9 +590,8 @@ class LiveTranslateService: NSObject {
             case .success(let message):
                 self?.handleMessage(message)
                 self?.receiveMessage()
-
             case .failure(let error):
-                print("❌ [Translate] 接收消息失败: \(error.localizedDescription)")
+                print("❌ [Translate] Failed to receive message: \(error.localizedDescription)")
                 self?.onError?("Receive error: \(error.localizedDescription)")
             }
         }
@@ -445,52 +600,52 @@ class LiveTranslateService: NSObject {
     private func handleMessage(_ message: URLSessionWebSocketTask.Message) {
         switch message {
         case .string(let text):
-            handleServerEvent(text)
+            switch provider {
+            case .alibaba:
+                handleAlibabaServerEvent(text)
+            case .google:
+                handleGeminiServerEvent(text)
+            }
         case .data(let data):
             if let text = String(data: data, encoding: .utf8) {
-                handleServerEvent(text)
+                switch provider {
+                case .alibaba:
+                    handleAlibabaServerEvent(text)
+                case .google:
+                    handleGeminiServerEvent(text)
+                }
             }
         @unknown default:
             break
         }
     }
 
-    private func handleServerEvent(_ jsonString: String) {
+    // MARK: - Alibaba Server Events
+
+    private func handleAlibabaServerEvent(_ jsonString: String) {
         guard let data = jsonString.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let type = json["type"] as? String else {
-            print("⚠️ [Translate] 收到无法解析的消息: \(jsonString.prefix(200))")
-            return
-        }
-
-        // 打印所有收到的事件类型
-        print("📥 [Translate] 收到事件: \(type)")
+              let type = json["type"] as? String else { return }
 
         DispatchQueue.main.async {
             switch type {
             case TranslateServerEvent.sessionCreated.rawValue,
                  TranslateServerEvent.sessionUpdated.rawValue:
-                print("✅ [Translate] 会话已建立")
+                print("✅ [Translate] Alibaba session established")
                 self.onConnected?()
 
             case TranslateServerEvent.responseAudioTranscriptText.rawValue:
-                // 增量翻译文本
                 if let delta = json["delta"] as? String {
-                    print("💬 [Translate] 翻译片段: \(delta)")
                     self.onTranslationDelta?(delta)
                 }
 
             case TranslateServerEvent.responseAudioTranscriptDone.rawValue:
-                // 翻译文本完成（输出音频+文本模式）
                 if let text = json["text"] as? String {
-                    print("✅ [Translate] 翻译完成: \(text)")
                     self.onTranslationText?(text)
                 }
 
             case TranslateServerEvent.responseTextDone.rawValue:
-                // 翻译文本完成（仅文本模式）
                 if let text = json["text"] as? String {
-                    print("✅ [Translate] 翻译完成(文本): \(text)")
                     self.onTranslationText?(text)
                 }
 
@@ -502,25 +657,92 @@ class LiveTranslateService: NSObject {
                 }
 
             case TranslateServerEvent.responseAudioDone.rawValue:
-                self.isCollectingAudio = false
-                if !self.audioBuffer.isEmpty {
-                    self.playAudio(self.audioBuffer)
-                    self.audioBuffer = Data()
-                }
-                self.audioChunkCount = 0
-                self.hasStartedPlaying = false
-                self.onAudioDone?()
+                self.finishAudioPlayback()
 
             case TranslateServerEvent.error.rawValue:
                 if let error = json["error"] as? [String: Any],
                    let message = error["message"] as? String {
-                    print("❌ [Translate] 服务器错误: \(message)")
+                    print("❌ [Translate] Server error: \(message)")
                     self.onError?(message)
                 }
 
             default:
                 break
             }
+        }
+    }
+
+    // MARK: - Gemini Server Events
+
+    private func handleGeminiServerEvent(_ jsonString: String) {
+        guard let data = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+
+        DispatchQueue.main.async {
+            // Setup complete
+            if json["setupComplete"] != nil {
+                print("✅ [Translate] Gemini session configured")
+                self.isGeminiSessionConfigured = true
+                self.onConnected?()
+                return
+            }
+
+            // Server content (audio/text responses)
+            if let serverContent = json["serverContent"] as? [String: Any] {
+                self.handleGeminiServerContent(serverContent)
+                return
+            }
+
+            // Errors
+            if let error = json["error"] as? [String: Any] {
+                let message = error["message"] as? String ?? "Unknown error"
+                print("❌ [Translate] Gemini error: \(message)")
+                self.onError?(message)
+                return
+            }
+        }
+    }
+
+    private func handleGeminiServerContent(_ content: [String: Any]) {
+        // Model turn - AI translation response
+        if let modelTurn = content["modelTurn"] as? [String: Any],
+           let parts = modelTurn["parts"] as? [[String: Any]] {
+
+            for part in parts {
+                // Text translation
+                if let text = part["text"] as? String {
+                    onTranslationDelta?(text)
+                }
+
+                // Audio translation
+                if let inlineData = part["inlineData"] as? [String: Any],
+                   let mimeType = inlineData["mimeType"] as? String,
+                   mimeType.contains("audio"),
+                   let base64Audio = inlineData["data"] as? String,
+                   let audioData = Data(base64Encoded: base64Audio) {
+                    onAudioDelta?(audioData)
+                    handleAudioChunk(audioData)
+                }
+            }
+        }
+
+        // Turn complete
+        if let turnComplete = content["turnComplete"] as? Bool, turnComplete {
+            finishAudioPlayback()
+            // Emit the accumulated streaming translation as final
+            onTranslationText?("")
+        }
+
+        // Interrupted
+        if let interrupted = content["interrupted"] as? Bool, interrupted {
+            stopPlaybackEngine()
+            setupPlaybackEngine()
+        }
+
+        // Output transcription (AI spoken text)
+        if let outputTranscription = content["outputTranscription"] as? [String: Any],
+           let text = outputTranscription["text"] as? String {
+            onTranslationDelta?(text)
         }
     }
 
@@ -555,6 +777,19 @@ class LiveTranslateService: NSObject {
         }
     }
 
+    private func finishAudioPlayback() {
+        isCollectingAudio = false
+
+        if !audioBuffer.isEmpty {
+            playAudio(audioBuffer)
+            audioBuffer = Data()
+        }
+
+        audioChunkCount = 0
+        hasStartedPlaying = false
+        onAudioDone?()
+    }
+
     private func playAudio(_ audioData: Data) {
         guard let playerNode = playerNode,
               let playbackFormat = playbackFormat else { return }
@@ -579,7 +814,6 @@ class LiveTranslateService: NSObject {
 
         buffer.frameLength = AVAudioFrameCount(frameCount)
 
-        // PCM16 → Float32
         data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
             guard let baseAddress = bytes.baseAddress else { return }
             let int16Pointer = baseAddress.assumingMemoryBound(to: Int16.self)
@@ -604,11 +838,16 @@ class LiveTranslateService: NSObject {
 
 extension LiveTranslateService: URLSessionWebSocketDelegate {
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-        print("✅ [Translate] WebSocket 连接已建立")
+        print("✅ [Translate] WebSocket connection established")
+        if provider == .google {
+            DispatchQueue.main.async {
+                self.configureGeminiSession()
+            }
+        }
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         let reasonString = reason.flatMap { String(data: $0, encoding: .utf8) } ?? "unknown"
-        print("🔌 [Translate] WebSocket 已断开, closeCode: \(closeCode.rawValue), reason: \(reasonString)")
+        print("🔌 [Translate] WebSocket disconnected, closeCode: \(closeCode.rawValue), reason: \(reasonString)")
     }
 }

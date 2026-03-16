@@ -1,6 +1,6 @@
 /*
  * Quick Vision Models
- * 快速识图数据模型 - 识图模式和历史记录
+ * Quick vision data model - recognition modes and history records
  */
 
 import Foundation
@@ -9,13 +9,13 @@ import UIKit
 // MARK: - Quick Vision Mode
 
 enum QuickVisionMode: String, CaseIterable, Codable, Identifiable {
-    case standard = "standard"      // 默认模式
-    case health = "health"          // 健康识图
-    case blind = "blind"            // 盲人模式
-    case reading = "reading"        // 阅读模式
-    case translate = "translate"    // 翻译模式
-    case encyclopedia = "encyclopedia" // 百科（博物馆）模式
-    case custom = "custom"          // 自定义提示词
+    case standard = "standard"      // Default mode
+    case health = "health"          // Health recognition
+    case blind = "blind"            // Blind assist mode
+    case reading = "reading"        // Reading mode
+    case translate = "translate"    // Translation mode
+    case encyclopedia = "encyclopedia" // Encyclopedia (museum) mode
+    case custom = "custom"          // Custom prompt
 
     var id: String { rawValue }
 
@@ -76,7 +76,7 @@ enum QuickVisionMode: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// 获取模式对应的提示词
+    /// Get the prompt for this mode
     var prompt: String {
         switch self {
         case .standard:
@@ -88,12 +88,12 @@ enum QuickVisionMode: String, CaseIterable, Codable, Identifiable {
         case .reading:
             return "prompt.quickvision.reading".localized
         case .translate:
-            // 翻译模式需要从 Manager 获取目标语言
+            // Translation mode needs to get target language from Manager
             return "prompt.quickvision.translate".localized
         case .encyclopedia:
             return "prompt.quickvision.encyclopedia".localized
         case .custom:
-            // 自定义模式需要从 Manager 获取
+            // Custom mode needs to get prompt from Manager
             return ""
         }
     }
@@ -122,7 +122,7 @@ struct QuickVisionRecord: Identifiable, Codable {
         self.mode = mode
         self.prompt = prompt
         self.result = result
-        // 压缩缩略图到 100x100，质量 0.5
+        // Compress thumbnail to 100x100, quality 0.5
         if let image = thumbnail {
             let size = CGSize(width: 100, height: 100)
             let renderer = UIGraphicsImageRenderer(size: size)

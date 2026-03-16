@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Live AI Mode Manager
- * 实时对话模式管理器 - 管理当前模式、自定义提示词、翻译目标语言
+ * Real-time conversation mode manager - manages current mode, custom prompts, translation target language
  */
 class LiveAIModeManager private constructor(private val context: Context) {
 
@@ -29,9 +29,9 @@ class LiveAIModeManager private constructor(private val context: Context) {
             }
         }
 
-        // 支持的翻译目标语言
+        // Supported translation target languages
         val supportedLanguages: List<Pair<String, String>> = listOf(
-            "zh-CN" to "中文",
+            "zh-CN" to "Chinese",
             "en-US" to "English",
             "ja-JP" to "日本語",
             "ko-KR" to "한국어",
@@ -47,15 +47,15 @@ class LiveAIModeManager private constructor(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    // 当前模式
+    // Current mode
     private val _currentMode = MutableStateFlow(loadMode())
     val currentMode: StateFlow<LiveAIMode> = _currentMode.asStateFlow()
 
-    // 自定义提示词
+    // Custom prompt
     private val _customPrompt = MutableStateFlow(loadCustomPrompt())
     val customPrompt: StateFlow<String> = _customPrompt.asStateFlow()
 
-    // 翻译目标语言
+    // Translation target language
     private val _translateTargetLanguage = MutableStateFlow(loadTranslateTargetLanguage())
     val translateTargetLanguage: StateFlow<String> = _translateTargetLanguage.asStateFlow()
 
@@ -88,7 +88,7 @@ class LiveAIModeManager private constructor(private val context: Context) {
     }
 
     /**
-     * 获取当前模式的完整系统提示词
+     * Get the full system prompt for the current mode
      */
     fun getSystemPrompt(): String {
         return when (_currentMode.value) {
@@ -99,7 +99,7 @@ class LiveAIModeManager private constructor(private val context: Context) {
     }
 
     /**
-     * 获取指定模式的系统提示词
+     * Get the system prompt for a specified mode
      */
     fun getSystemPrompt(mode: LiveAIMode): String {
         return when (mode) {
@@ -110,23 +110,23 @@ class LiveAIModeManager private constructor(private val context: Context) {
     }
 
     /**
-     * 获取翻译模式的提示词（包含目标语言）
+     * Get the prompt for translation mode (includes target language)
      */
     private fun getTranslatePrompt(): String {
-        val targetLanguageName = supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "中文"
+        val targetLanguageName = supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "Chinese"
         val basePrompt = context.getString(R.string.prompt_liveai_translate)
         return basePrompt.replace("{LANGUAGE}", targetLanguageName)
     }
 
     /**
-     * 获取目标语言名称
+     * Get target language name
      */
     fun getTranslateTargetLanguageName(): String {
-        return supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "中文"
+        return supportedLanguages.find { it.first == _translateTargetLanguage.value }?.second ?: "Chinese"
     }
 
     /**
-     * 是否在语音触发时自动发送图片
+     * Whether to automatically send images when speech is triggered
      */
     fun autoSendImageOnSpeech(): Boolean {
         return _currentMode.value.autoSendImageOnSpeech()

@@ -1,6 +1,6 @@
 /*
  * Design System
- * 统一的设计系统 - 颜色、字体、样式
+ * Unified design system - colors, fonts, styles
  */
 
 import SwiftUI

@@ -1,6 +1,6 @@
 /*
  * Live AI Manager
- * 后台管理 Live AI 会话 - 支持 Siri 和快捷指令无需解锁手机
+ * Background Live AI session management - supports Siri and Shortcuts without unlocking the phone
  */
 
 import Foundation
@@ -17,25 +17,25 @@ class LiveAIManager: ObservableObject {
     @Published var isConnected = false
     @Published var errorMessage: String?
 
-    // 依赖
+    // Dependencies
     private(set) var streamViewModel: StreamSessionViewModel?
     private var omniService: OmniRealtimeService?
     private var geminiService: GeminiLiveService?
     private var provider: LiveAIProvider = .alibaba
 
-    // 视频帧
+    // Video frame
     private var currentVideoFrame: UIImage?
     private var isImageSendingEnabled = false
     private var frameUpdateTimer: Timer?
 
-    // 对话历史
+    // Conversation history
     private var conversationHistory: [ConversationMessage] = []
 
     // TTS
     private let tts = TTSService.shared
 
     private init() {
-        // 监听 Intent 触发
+        // Listen for Intent trigger
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleLiveAITrigger(_:)),
@@ -44,7 +44,7 @@ class LiveAIManager: ObservableObject {
         )
     }
 
-    /// 设置 StreamSessionViewModel 引用
+    /// Set StreamSessionViewModel reference
     func setStreamViewModel(_ viewModel: StreamSessionViewModel) {
         self.streamViewModel = viewModel
     }
@@ -57,7 +57,7 @@ class LiveAIManager: ObservableObject {
 
     // MARK: - Start Session
 
-    /// 启动 Live AI 会话（后台模式）
+    /// Start Live AI session (background mode)
     func startLiveAISession() async {
         guard !isRunning else {
             print("⚠️ [LiveAIManager] Already running")
@@ -66,15 +66,15 @@ class LiveAIManager: ObservableObject {
 
         guard let streamViewModel = streamViewModel else {
             print("❌ [LiveAIManager] StreamViewModel not set")
-            tts.speak("Live AI 未初始化，请先打开应用")
+            tts.speak("Live AI not initialized, please open the app first")
             return
         }
 
-        // 获取 API Key
+        // Get API Key
         let apiKey = APIProviderManager.staticLiveAIAPIKey
         guard !apiKey.isEmpty else {
-            errorMessage = "请先在设置中配置 API Key"
-            tts.speak("请先在设置中配置 API Key")
+            errorMessage = "Please configure API Key in settings first"
+            tts.speak("Please configure API Key in settings first")
             return
         }
 
@@ -82,27 +82,27 @@ class LiveAIManager: ObservableObject {
         errorMessage = nil
         conversationHistory = []
 
-        // 获取当前 provider
+        // Get current provider
         provider = APIProviderManager.staticLiveAIProvider
 
         print("🚀 [LiveAIManager] Starting Live AI session...")
 
         do {
-            // 1. 检查设备是否已连接
+            // 1. Check if device is connected
             if !streamViewModel.hasActiveDevice {
                 print("❌ [LiveAIManager] No active device connected")
                 throw LiveAIError.noDevice
             }
 
-            // 2. 启动视频流（如果未启动）
+            // 2. Start video stream (if not already started)
             if streamViewModel.streamingStatus != .streaming {
                 print("📹 [LiveAIManager] Starting stream...")
                 await streamViewModel.handleStartStreaming()
 
-                // 等待流进入 streaming 状态（最多 5 秒）
+                // Wait for stream to enter streaming state (up to 5 seconds)
                 var streamWait = 0
                 while streamViewModel.streamingStatus != .streaming && streamWait < 50 {
-                    try await Task.sleep(nanoseconds: 100_000_000) // 0.1秒
+                    try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
                     streamWait += 1
                 }
 
@@ -112,20 +112,20 @@ class LiveAIManager: ObservableObject {
                 }
             }
 
-            // 3. 预配置音频会话（后台模式需要）
+            // 3. Pre-configure audio session (required for background mode)
             try configureAudioSessionForBackground()
 
-            // 4. 初始化 AI 服务
+            // 4. Initialize AI service
             initializeService(apiKey: apiKey)
 
-            // 4. 连接 AI 服务
+            // 4. Connect AI service
             print("🔌 [LiveAIManager] Connecting to AI service...")
             connectService()
 
-            // 等待连接成功（最多 10 秒）
+            // Wait for connection (up to 10 seconds)
             var connectWait = 0
             while !isConnected && connectWait < 100 {
-                try await Task.sleep(nanoseconds: 100_000_000) // 0.1秒
+                try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
                 connectWait += 1
             }
 
@@ -134,11 +134,11 @@ class LiveAIManager: ObservableObject {
                 throw LiveAIError.connectionFailed
             }
 
-            // 5. 启动视频帧更新定时器
+            // 5. Start video frame update timer
             startFrameUpdateTimer()
             print("✅ [LiveAIManager] Frame update timer started")
 
-            // 6. 直接开始录音（不播放 TTS，避免音频会话冲突）
+            // 6. Start recording directly (skip TTS to avoid audio session conflicts)
             print("🎤 [LiveAIManager] About to start recording...")
             startRecording()
 
@@ -157,22 +157,22 @@ class LiveAIManager: ObservableObject {
 
     // MARK: - Audio Session Configuration
 
-    /// 预配置音频会话（后台模式需要在初始化音频引擎之前配置）
+    /// Pre-configure audio session (background mode requires configuration before initializing audio engine)
     private func configureAudioSessionForBackground() throws {
         let audioSession = AVAudioSession.sharedInstance()
 
-        // 先停用再重新激活，确保干净的状态
+        // Deactivate then reactivate to ensure a clean state
         do {
             try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
-            print("✅ [LiveAIManager] 音频会话已停用")
+            print("✅ [LiveAIManager] Audio session deactivated")
         } catch {
-            print("⚠️ [LiveAIManager] 停用音频会话失败: \(error)")
+            print("⚠️ [LiveAIManager] Failed to deactivate audio session: \(error)")
         }
 
-        // 配置音频会话
+        // Configure audio session
         try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .allowBluetoothA2DP, .mixWithOthers])
         try audioSession.setActive(true)
-        print("✅ [LiveAIManager] 后台音频会话已配置: category=\(audioSession.category.rawValue), mode=\(audioSession.mode.rawValue)")
+        print("✅ [LiveAIManager] Background audio session configured: category=\(audioSession.category.rawValue), mode=\(audioSession.mode.rawValue)")
     }
 
     // MARK: - Initialize Service
@@ -200,7 +200,7 @@ class LiveAIManager: ObservableObject {
 
         omniService.onFirstAudioSent = { [weak self] in
             Task { @MainActor in
-                print("✅ [LiveAIManager] 收到第一次音频发送回调，启用图片发送")
+                print("✅ [LiveAIManager] First audio send callback received, enabling image sending")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     self?.isImageSendingEnabled = true
                 }
@@ -212,7 +212,7 @@ class LiveAIManager: ObservableObject {
                 if let strongSelf = self,
                    strongSelf.isImageSendingEnabled,
                    let frame = strongSelf.currentVideoFrame {
-                    print("🎤📸 [LiveAIManager] 检测到用户语音，发送当前视频帧")
+                    print("🎤📸 [LiveAIManager] User speech detected, sending current video frame")
                     strongSelf.omniService?.sendImageAppend(frame)
                 }
             }
@@ -221,7 +221,7 @@ class LiveAIManager: ObservableObject {
         omniService.onUserTranscript = { [weak self] userText in
             Task { @MainActor in
                 guard let self = self else { return }
-                print("💬 [LiveAIManager] 用户: \(userText)")
+                print("💬 [LiveAIManager] User: \(userText)")
                 self.conversationHistory.append(
                     ConversationMessage(role: .user, content: userText)
                 )
@@ -258,7 +258,7 @@ class LiveAIManager: ObservableObject {
 
         geminiService.onFirstAudioSent = { [weak self] in
             Task { @MainActor in
-                print("✅ [LiveAIManager] 收到第一次音频发送回调，启用图片发送")
+                print("✅ [LiveAIManager] First audio send callback received, enabling image sending")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     self?.isImageSendingEnabled = true
                 }
@@ -270,7 +270,7 @@ class LiveAIManager: ObservableObject {
                 if let strongSelf = self,
                    strongSelf.isImageSendingEnabled,
                    let frame = strongSelf.currentVideoFrame {
-                    print("🎤📸 [LiveAIManager] 检测到用户语音，发送当前视频帧")
+                    print("🎤📸 [LiveAIManager] User speech detected, sending current video frame")
                     strongSelf.geminiService?.sendImageInput(frame)
                 }
             }
@@ -279,7 +279,7 @@ class LiveAIManager: ObservableObject {
         geminiService.onUserTranscript = { [weak self] userText in
             Task { @MainActor in
                 guard let self = self else { return }
-                print("💬 [LiveAIManager] 用户: \(userText)")
+                print("💬 [LiveAIManager] User: \(userText)")
                 self.conversationHistory.append(
                     ConversationMessage(role: .user, content: userText)
                 )
@@ -316,7 +316,7 @@ class LiveAIManager: ObservableObject {
     }
 
     private func startRecording() {
-        print("🎤 [LiveAIManager] 开始录音")
+        print("🎤 [LiveAIManager] Starting recording")
         switch provider {
         case .alibaba:
             omniService?.startRecording()
@@ -326,7 +326,7 @@ class LiveAIManager: ObservableObject {
     }
 
     private func stopRecording() {
-        print("🛑 [LiveAIManager] 停止录音")
+        print("🛑 [LiveAIManager] Stopping recording")
         switch provider {
         case .alibaba:
             omniService?.stopRecording()
@@ -354,23 +354,23 @@ class LiveAIManager: ObservableObject {
 
     // MARK: - Stop Session
 
-    /// 停止 Live AI 会话
+    /// Stop Live AI session
     func stopSession() async {
         guard isRunning else { return }
 
         print("🛑 [LiveAIManager] Stopping session...")
 
-        // 停止定时器
+        // Stop timer
         frameUpdateTimer?.invalidate()
         frameUpdateTimer = nil
 
-        // 停止录音
+        // Stop recording
         stopRecording()
 
-        // 保存对话
+        // Save conversation
         saveConversation()
 
-        // 断开连接
+        // Disconnect
         switch provider {
         case .alibaba:
             omniService?.disconnect()
@@ -378,10 +378,10 @@ class LiveAIManager: ObservableObject {
             geminiService?.disconnect()
         }
 
-        // 停止视频流
+        // Stop video stream
         await streamViewModel?.stopSession()
 
-        // 重置状态
+        // Reset state
         omniService = nil
         geminiService = nil
         isConnected = false
@@ -392,10 +392,10 @@ class LiveAIManager: ObservableObject {
         print("✅ [LiveAIManager] Session stopped")
     }
 
-    /// 保存对话到历史记录
+    /// Save conversation to history
     private func saveConversation() {
         guard !conversationHistory.isEmpty else {
-            print("💬 [LiveAIManager] 无对话内容，跳过保存")
+            print("💬 [LiveAIManager] No conversation content, skipping save")
             return
         }
 
@@ -414,10 +414,10 @@ class LiveAIManager: ObservableObject {
         )
 
         ConversationStorage.shared.saveConversation(record)
-        print("💾 [LiveAIManager] 对话已保存: \(conversationHistory.count) 条消息")
+        print("💾 [LiveAIManager] Conversation saved: \(conversationHistory.count) messages")
     }
 
-    /// 手动触发停止（从 UI 调用）
+    /// Manually trigger stop (called from UI)
     func triggerStop() {
         Task { @MainActor in
             await stopSession()
@@ -436,13 +436,13 @@ enum LiveAIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noDevice:
-            return "眼镜未连接，请先在 Meta View 中配对眼镜"
+            return "Glasses not connected, please pair glasses in Meta View first"
         case .streamNotReady:
-            return "视频流启动失败，请检查眼镜连接状态"
+            return "Failed to start video stream, please check glasses connection"
         case .connectionFailed:
-            return "AI 服务连接失败，请检查网络"
+            return "AI service connection failed, please check network"
         case .noAPIKey:
-            return "请先在设置中配置 API Key"
+            return "Please configure API Key in settings first"
         }
     }
 }

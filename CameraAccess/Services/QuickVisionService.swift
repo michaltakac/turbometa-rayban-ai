@@ -1,7 +1,7 @@
 /*
  * Quick Vision Service
- * 快速识图服务 - 支持多提供商 (阿里云/OpenRouter)
- * 返回简洁的描述，适合 TTS 播报
+ * Quick image recognition service - supports multiple providers (Alibaba Cloud/OpenRouter)
+ * Returns concise descriptions suitable for TTS playback
  */
 
 import Foundation
@@ -83,11 +83,11 @@ class QuickVisionService {
 
     // MARK: - Quick Vision Analysis
 
-    /// 快速识图 - 返回简洁的语音描述
+    /// Quick image recognition - returns a concise voice description
     /// - Parameters:
-    ///   - image: 要识别的图片
-    ///   - customPrompt: 自定义提示词（可选，如果为 nil 则使用当前模式的提示词）
-    /// - Returns: 简洁的描述文本，适合 TTS 播报
+    ///   - image: The image to recognize
+    ///   - customPrompt: Custom prompt (optional, uses current mode's prompt if nil)
+    /// - Returns: Concise description text suitable for TTS playback
     func analyzeImage(_ image: UIImage, customPrompt: String? = nil) async throws -> String {
         // Convert image to base64
         guard let imageData = image.jpegData(compressionQuality: 0.7) else {
@@ -97,7 +97,7 @@ class QuickVisionService {
         let base64String = imageData.base64EncodedString()
         let dataURL = "data:image/jpeg;base64,\(base64String)"
 
-        // 使用自定义提示词、模式管理器的提示词、或默认提示词
+        // Use custom prompt, mode manager's prompt, or default prompt
         let prompt = customPrompt ?? QuickVisionModeManager.staticPrompt
 
         // Create API request
@@ -140,7 +140,7 @@ class QuickVisionService {
             urlRequest.setValue(value, forHTTPHeaderField: key)
         }
 
-        urlRequest.timeoutInterval = 60 // 60秒超时（OpenRouter 可能需要更长时间）
+        urlRequest.timeoutInterval = 60 // 60 second timeout (OpenRouter may need more time)
 
         let encoder = JSONEncoder()
         urlRequest.httpBody = try encoder.encode(request)
@@ -217,19 +217,19 @@ enum QuickVisionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noDevice:
-            return "眼镜未连接，请先在 Meta View 中配对眼镜"
+            return "Glasses not connected, please pair glasses in Meta View first"
         case .streamNotReady:
-            return "视频流启动失败，请检查眼镜连接状态"
+            return "Video stream failed to start, please check glasses connection status"
         case .frameTimeout:
-            return "等待视频帧超时，请重试"
+            return "Timed out waiting for video frame, please try again"
         case .invalidImage:
-            return "无法处理图片"
+            return "Unable to process image"
         case .emptyResponse:
-            return "AI返回空响应，请重试"
+            return "AI returned empty response, please try again"
         case .invalidResponse:
-            return "无效的响应格式"
+            return "Invalid response format"
         case .apiError(let statusCode, let message):
-            return "API错误(\(statusCode)): \(message)"
+            return "API error (\(statusCode)): \(message)"
         }
     }
 }

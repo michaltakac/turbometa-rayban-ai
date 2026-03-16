@@ -25,10 +25,10 @@ data class FoodNutritionResponse(
 
     val healthScoreText: String
         get() = when {
-            healthScore >= 80 -> "优秀"
-            healthScore >= 60 -> "良好"
-            healthScore >= 40 -> "一般"
-            else -> "较差"
+            healthScore >= 80 -> "Excellent"
+            healthScore >= 60 -> "Good"
+            healthScore >= 40 -> "Fair"
+            else -> "Poor"
         }
 }
 
@@ -41,23 +41,23 @@ data class FoodItem(
     val carbs: Double,
     val fiber: Double? = null,
     val sugar: Double? = null,
-    val healthRating: String = "良好"
+    val healthRating: String = "Good"
 ) {
     val healthRatingEmoji: String
         get() = when (healthRating) {
-            "优秀" -> "🟢"
-            "良好" -> "🟡"
-            "一般" -> "🟠"
-            "较差" -> "🔴"
+            "Excellent" -> "🟢"
+            "Good" -> "🟡"
+            "Fair" -> "🟠"
+            "Poor" -> "🔴"
             else -> "🟡"
         }
 
     val healthRatingColor: Color
         get() = when (healthRating) {
-            "优秀" -> HealthExcellent
-            "良好" -> HealthGood
-            "一般" -> HealthFair
-            "较差" -> HealthPoor
+            "Excellent" -> HealthExcellent
+            "Good" -> HealthGood
+            "Fair" -> HealthFair
+            "Poor" -> HealthPoor
             else -> HealthGood
         }
 }

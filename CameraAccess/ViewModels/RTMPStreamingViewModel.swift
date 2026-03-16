@@ -77,8 +77,8 @@ class RTMPStreamingViewModel: ObservableObject {
             case .custom: return "rtmp.platform.custom".localized
             case .youtube: return "YouTube Live"
             case .twitch: return "Twitch"
-            case .bilibili: return "Bilibili (B站)"
-            case .douyin: return "Douyin (抖音)"
+            case .bilibili: return "Bilibili"
+            case .douyin: return "Douyin"
             case .tiktok: return "TikTok"
             case .facebook: return "Facebook Live"
             }

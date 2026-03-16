@@ -9,12 +9,12 @@ import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
 /**
- * Language Manager - App 语言管理器
+ * Language Manager - App language manager
  * 1:1 port from iOS LanguageManager.swift
  */
 enum class AppLanguage(val code: String, val displayName: String, val nativeName: String) {
-    SYSTEM("system", "System", "跟随系统"),
-    CHINESE("zh-CN", "Chinese", "中文"),
+    SYSTEM("system", "System", "Follow System"),
+    CHINESE("zh-CN", "Chinese", "Chinese"),
     ENGLISH("en", "English", "English");
 
     companion object {

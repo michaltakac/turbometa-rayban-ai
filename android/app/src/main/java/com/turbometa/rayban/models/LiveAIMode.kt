@@ -5,15 +5,15 @@ import com.turbometa.rayban.R
 
 /**
  * Live AI Modes
- * 实时对话模式 - 不同场景的对话助手
+ * Real-time conversation modes - conversation assistants for different scenarios
  */
 enum class LiveAIMode(val id: String) {
-    STANDARD("standard"),   // 默认模式 - 自由对话
-    MUSEUM("museum"),       // 博物馆模式
-    BLIND("blind"),         // 盲人模式
-    READING("reading"),     // 阅读模式
-    TRANSLATE("translate"), // 翻译模式
-    CUSTOM("custom");       // 自定义提示词
+    STANDARD("standard"),   // Default mode - free conversation
+    MUSEUM("museum"),       // Museum mode
+    BLIND("blind"),         // Blind assistance mode
+    READING("reading"),     // Reading mode
+    TRANSLATE("translate"), // Translation mode
+    CUSTOM("custom");       // Custom prompt
 
     fun getDisplayName(context: Context): String {
         return when (this) {
@@ -39,7 +39,7 @@ enum class LiveAIMode(val id: String) {
 
 
     /**
-     * 获取模式对应的系统提示词（不包括翻译和自定义，这两个需要动态生成）
+     * Get the system prompt for this mode (excluding translate and custom, which need dynamic generation)
      */
     fun getSystemPrompt(context: Context): String {
         return when (this) {
@@ -47,19 +47,19 @@ enum class LiveAIMode(val id: String) {
             MUSEUM -> context.getString(R.string.prompt_liveai_museum)
             BLIND -> context.getString(R.string.prompt_liveai_blind)
             READING -> context.getString(R.string.prompt_liveai_reading)
-            TRANSLATE -> "" // 需要通过 Manager 获取（包含目标语言）
-            CUSTOM -> "" // 需要通过 Manager 获取自定义内容
+            TRANSLATE -> "" // Needs to be obtained through Manager (includes target language)
+            CUSTOM -> "" // Needs to be obtained through Manager for custom content
         }
     }
 
     /**
-     * 是否在用户说话时自动发送图片
+     * Whether to automatically send images when user speaks
      */
     fun autoSendImageOnSpeech(): Boolean {
         return when (this) {
-            STANDARD -> true  // 默认模式：语音触发时发送图片
-            MUSEUM, BLIND, READING, TRANSLATE -> true  // 这些模式都需要看图
-            CUSTOM -> true  // 自定义模式也支持图片
+            STANDARD -> true  // Default mode: send image on voice trigger
+            MUSEUM, BLIND, READING, TRANSLATE -> true  // These modes all need image viewing
+            CUSTOM -> true  // Custom mode also supports images
         }
     }
 

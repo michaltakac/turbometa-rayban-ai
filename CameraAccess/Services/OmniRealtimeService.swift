@@ -45,7 +45,7 @@ class OmniRealtimeService: NSObject {
     // Configuration
     private let apiKey: String
     private let model = "qwen3-omni-flash-realtime"
-    // 根据用户设置的区域动态获取 WebSocket URL（北京/新加坡）
+    // Dynamically get WebSocket URL based on user's region setting (Beijing/Singapore)
     private var baseURL: String {
         return APIProviderManager.staticLiveAIWebsocketURL
     }
@@ -56,21 +56,21 @@ class OmniRealtimeService: NSObject {
     // Audio Playback Engine (separate engine for playback)
     private var playbackEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
-    // 使用 Float32 标准格式，兼容 iOS 18
+    // Use Float32 standard format, compatible with iOS 18
     private let playbackFormat = AVAudioFormat(standardFormatWithSampleRate: 24000, channels: 1)
 
     // Audio buffer management
     private var audioBuffer = Data()
     private var isCollectingAudio = false
     private var audioChunkCount = 0
-    private let minChunksBeforePlay = 2 // 首次收到2个片段后开始播放
+    private let minChunksBeforePlay = 2 // Start playback after receiving first 2 chunks
     private var hasStartedPlaying = false
     private var isPlaybackEngineRunning = false
 
     // Callbacks
     var onTranscriptDelta: ((String) -> Void)?
     var onTranscriptDone: ((String) -> Void)?
-    var onUserTranscript: ((String) -> Void)? // 用户语音识别结果
+    var onUserTranscript: ((String) -> Void)? // User speech recognition result
     var onAudioDelta: ((Data) -> Void)?
     var onAudioDone: (() -> Void)?
     var onSpeechStarted: (() -> Void)?
@@ -107,7 +107,7 @@ class OmniRealtimeService: NSObject {
         guard let playbackEngine = playbackEngine,
               let playerNode = playerNode,
               let playbackFormat = playbackFormat else {
-            print("❌ [Omni] 无法初始化播放引擎")
+            print("❌ [Omni] Failed to initialize playback engine")
             return
         }
 
@@ -118,7 +118,7 @@ class OmniRealtimeService: NSObject {
         playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
         playbackEngine.prepare()
 
-        print("✅ [Omni] 播放引擎初始化完成: Float32 @ 24kHz")
+        print("✅ [Omni] Playback engine initialized: Float32 @ 24kHz")
     }
 
     private func startPlaybackEngine() {
@@ -127,31 +127,31 @@ class OmniRealtimeService: NSObject {
         do {
             try playbackEngine.start()
             isPlaybackEngineRunning = true
-            print("▶️ [Omni] 播放引擎已启动")
+            print("▶️ [Omni] Playback engine started")
         } catch {
-            print("❌ [Omni] 播放引擎启动失败: \(error)")
+            print("❌ [Omni] Failed to start playback engine: \(error)")
         }
     }
 
     private func stopPlaybackEngine() {
         guard let playbackEngine = playbackEngine, isPlaybackEngineRunning else { return }
 
-        // 重要：先重置 playerNode 以清除所有已调度但未播放的 buffer
+        // Important: reset playerNode first to clear all scheduled but unplayed buffers
         playerNode?.stop()
-        playerNode?.reset()  // 清除队列中的所有 buffer
+        playerNode?.reset()  // Clear all buffers in the queue
         playbackEngine.stop()
         isPlaybackEngineRunning = false
-        print("⏹️ [Omni] 播放引擎已停止并清除队列")
+        print("⏹️ [Omni] Playback engine stopped and queue cleared")
     }
 
     // MARK: - WebSocket Connection
 
     func connect() {
         let urlString = "\(baseURL)?model=\(model)"
-        print("🔌 [Omni] 准备连接 WebSocket: \(urlString)")
+        print("🔌 [Omni] Preparing to connect WebSocket: \(urlString)")
 
         guard let url = URL(string: urlString) else {
-            print("❌ [Omni] 无效的 URL")
+            print("❌ [Omni] Invalid URL")
             onError?("Invalid URL")
             return
         }
@@ -165,18 +165,18 @@ class OmniRealtimeService: NSObject {
         webSocket = urlSession?.webSocketTask(with: request)
         webSocket?.resume()
 
-        print("🔌 [Omni] WebSocket 任务已启动")
+        print("🔌 [Omni] WebSocket task started")
         receiveMessage()
 
         // Wait a bit then send session configuration
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            print("⚙️ [Omni] 准备配置会话")
+            print("⚙️ [Omni] Preparing to configure session")
             self.configureSession()
         }
     }
 
     func disconnect() {
-        print("🔌 [Omni] 断开 WebSocket 连接")
+        print("🔌 [Omni] Disconnecting WebSocket")
         webSocket?.cancel(with: .goingAway, reason: nil)
         webSocket = nil
         stopRecording()
@@ -186,7 +186,7 @@ class OmniRealtimeService: NSObject {
     // MARK: - Session Configuration
 
     private func configureSession() {
-        // 根据当前语言设置获取语音和提示词
+        // Get voice and system prompt based on current language settings
         let voice = LanguageManager.staticTtsVoice
         let instructions = LiveAIModeManager.staticSystemPrompt
 
@@ -219,7 +219,7 @@ class OmniRealtimeService: NSObject {
         }
 
         do {
-            print("🎤 [Omni] 开始录音")
+            print("🎤 [Omni] Starting recording")
 
             // Stop engine if already running and remove any existing taps
             if let engine = audioEngine, engine.isRunning {
@@ -234,7 +234,7 @@ class OmniRealtimeService: NSObject {
             try audioSession.setActive(true)
 
             guard let engine = audioEngine else {
-                print("❌ [Omni] 音频引擎未初始化")
+                print("❌ [Omni] Audio engine not initialized")
                 return
             }
 
@@ -250,10 +250,10 @@ class OmniRealtimeService: NSObject {
             try engine.start()
 
             isRecording = true
-            print("✅ [Omni] 录音已启动")
+            print("✅ [Omni] Recording started")
 
         } catch {
-            print("❌ [Omni] 启动录音失败: \(error.localizedDescription)")
+            print("❌ [Omni] Failed to start recording: \(error.localizedDescription)")
             onError?("Failed to start recording: \(error.localizedDescription)")
         }
     }
@@ -263,7 +263,7 @@ class OmniRealtimeService: NSObject {
             return
         }
 
-        print("🛑 [Omni] 停止录音")
+        print("🛑 [Omni] Stopping recording")
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         isRecording = false
@@ -292,10 +292,10 @@ class OmniRealtimeService: NSObject {
 
         sendAudioAppend(base64Audio)
 
-        // 通知第一次音频已发送
+        // Notify that first audio has been sent
         if !hasAudioBeenSent {
             hasAudioBeenSent = true
-            print("✅ [Omni] 第一次音频已发送，启用语音触发模式")
+            print("✅ [Omni] First audio sent, voice trigger mode enabled")
             DispatchQueue.main.async { [weak self] in
                 self?.onFirstAudioSent?()
             }
@@ -307,14 +307,14 @@ class OmniRealtimeService: NSObject {
     private func sendEvent(_ event: [String: Any]) {
         guard let jsonData = try? JSONSerialization.data(withJSONObject: event),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
-            print("❌ [Omni] 无法序列化事件")
+            print("❌ [Omni] Failed to serialize event")
             return
         }
 
         let message = URLSessionWebSocketTask.Message.string(jsonString)
         webSocket?.send(message) { error in
             if let error = error {
-                print("❌ [Omni] 发送事件失败: \(error.localizedDescription)")
+                print("❌ [Omni] Failed to send event: \(error.localizedDescription)")
                 self.onError?("Send error: \(error.localizedDescription)")
             }
         }
@@ -331,12 +331,12 @@ class OmniRealtimeService: NSObject {
 
     func sendImageAppend(_ image: UIImage) {
         guard let imageData = image.jpegData(compressionQuality: 0.6) else {
-            print("❌ [Omni] 无法压缩图片")
+            print("❌ [Omni] Failed to compress image")
             return
         }
         let base64Image = imageData.base64EncodedString()
 
-        print("📸 [Omni] 发送图片: \(imageData.count) bytes")
+        print("📸 [Omni] Sending image: \(imageData.count) bytes")
 
         let event: [String: Any] = [
             "event_id": generateEventId(),
@@ -364,7 +364,7 @@ class OmniRealtimeService: NSObject {
                 self?.receiveMessage() // Continue receiving
 
             case .failure(let error):
-                print("❌ [Omni] 接收消息失败: \(error.localizedDescription)")
+                print("❌ [Omni] Failed to receive message: \(error.localizedDescription)")
                 self?.onError?("Receive error: \(error.localizedDescription)")
             }
         }
@@ -394,31 +394,31 @@ class OmniRealtimeService: NSObject {
             switch type {
             case OmniServerEvent.sessionCreated.rawValue,
                  OmniServerEvent.sessionUpdated.rawValue:
-                print("✅ [Omni] 会话已建立")
+                print("✅ [Omni] Session established")
                 self.onConnected?()
 
             case OmniServerEvent.inputAudioBufferSpeechStarted.rawValue:
-                print("🎤 [Omni] 检测到语音开始")
+                print("🎤 [Omni] Speech start detected")
                 self.onSpeechStarted?()
 
             case OmniServerEvent.inputAudioBufferSpeechStopped.rawValue:
-                print("🛑 [Omni] 检测到语音停止")
+                print("🛑 [Omni] Speech stop detected")
                 self.onSpeechStopped?()
 
             case OmniServerEvent.responseAudioTranscriptDelta.rawValue:
                 if let delta = json["delta"] as? String {
-                    print("💬 [Omni] AI回复片段: \(delta)")
+                    print("💬 [Omni] AI response fragment: \(delta)")
                     self.onTranscriptDelta?(delta)
                 }
 
             case OmniServerEvent.responseAudioTranscriptDone.rawValue:
                 let text = json["text"] as? String ?? ""
                 if text.isEmpty {
-                    print("⚠️ [Omni] AI回复完成但done事件无text字段（使用累积的delta）")
+                    print("⚠️ [Omni] AI response complete but done event has no text field (using accumulated deltas)")
                 } else {
-                    print("✅ [Omni] AI完整回复: \(text)")
+                    print("✅ [Omni] AI full response: \(text)")
                 }
-                // 总是调用回调，即使text为空，让ViewModel使用累积的片段
+                // Always call the callback, even if text is empty, let ViewModel use accumulated fragments
                 self.onTranscriptDone?(text)
 
             case OmniServerEvent.responseAudioDelta.rawValue:
@@ -433,32 +433,32 @@ class OmniRealtimeService: NSObject {
                         self.audioChunkCount = 0
                         self.hasStartedPlaying = false
 
-                        // 清除 playerNode 队列中可能残留的旧 buffer
+                        // Clear old buffers potentially remaining in playerNode queue
                         if self.isPlaybackEngineRunning {
-                            // 重要：reset 会断开 playerNode，需要完全重新初始化
+                            // Important: reset disconnects playerNode, requires full reinitialization
                             self.stopPlaybackEngine()
                             self.setupPlaybackEngine()
                             self.startPlaybackEngine()
                             self.playerNode?.play()
-                            print("🔄 [Omni] 重新初始化播放引擎")
+                            print("🔄 [Omni] Reinitialized playback engine")
                         }
                     }
 
                     self.audioChunkCount += 1
 
-                    // 流式播放策略：收集少量片段后开始流式调度
+                    // Streaming playback strategy: start scheduling after collecting a few chunks
                     if !self.hasStartedPlaying {
-                        // 首次播放前：先收集
+                        // Before first playback: collect first
                         self.audioBuffer.append(audioData)
 
                         if self.audioChunkCount >= self.minChunksBeforePlay {
-                            // 已收集足够片段，开始播放
+                            // Collected enough chunks, start playback
                             self.hasStartedPlaying = true
                             self.playAudio(self.audioBuffer)
                             self.audioBuffer = Data()
                         }
                     } else {
-                        // 已开始播放：直接调度每个片段，AVAudioPlayerNode 会自动排队
+                        // Already playing: schedule each chunk directly, AVAudioPlayerNode queues automatically
                         self.playAudio(audioData)
                     }
                 }
@@ -477,20 +477,20 @@ class OmniRealtimeService: NSObject {
                 self.onAudioDone?()
 
             case OmniServerEvent.conversationItemInputAudioTranscriptionCompleted.rawValue:
-                // 用户语音识别完成
+                // User speech recognition completed
                 if let transcript = json["transcript"] as? String {
-                    print("👤 [Omni] 用户说: \(transcript)")
+                    print("👤 [Omni] User said: \(transcript)")
                     self.onUserTranscript?(transcript)
                 }
 
             case OmniServerEvent.conversationItemCreated.rawValue:
-                // 可能包含其他类型的会话项
+                // May contain other types of conversation items
                 break
 
             case OmniServerEvent.error.rawValue:
                 if let error = json["error"] as? [String: Any],
                    let message = error["message"] as? String {
-                    print("❌ [Omni] 服务器错误: \(message)")
+                    print("❌ [Omni] Server error: \(message)")
                     self.onError?(message)
                 }
 
@@ -513,7 +513,7 @@ class OmniRealtimeService: NSObject {
             startPlaybackEngine()
             playerNode.play()
         } else {
-            // 确保 playerNode 在运行
+            // Ensure playerNode is running
             if !playerNode.isPlaying {
                 playerNode.play()
             }
@@ -529,7 +529,7 @@ class OmniRealtimeService: NSObject {
     }
 
     private func createPCMBuffer(from data: Data, format: AVAudioFormat) -> AVAudioPCMBuffer? {
-        // 服务器发送的是 PCM16 格式，每帧 2 字节
+        // Server sends PCM16 format, 2 bytes per frame
         let frameCount = data.count / 2
         guard frameCount > 0 else { return nil }
 
@@ -540,13 +540,13 @@ class OmniRealtimeService: NSObject {
 
         buffer.frameLength = AVAudioFrameCount(frameCount)
 
-        // 将 PCM16 转换为 Float32（兼容 iOS 18+）
+        // Convert PCM16 to Float32 (compatible with iOS 18+)
         data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
             guard let baseAddress = bytes.baseAddress else { return }
             let int16Pointer = baseAddress.assumingMemoryBound(to: Int16.self)
             let floatData = channelData[0]
             for i in 0..<frameCount {
-                // Int16 范围 -32768 到 32767，转换为 -1.0 到 1.0
+                // Int16 range -32768 to 32767, convert to -1.0 to 1.0
                 floatData[i] = Float(int16Pointer[i]) / 32768.0
             }
         }
@@ -566,11 +566,11 @@ class OmniRealtimeService: NSObject {
 
 extension OmniRealtimeService: URLSessionWebSocketDelegate {
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-        print("✅ [Omni] WebSocket 连接已建立, protocol: \(`protocol` ?? "none")")
+        print("✅ [Omni] WebSocket connection established, protocol: \(`protocol` ?? "none")")
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         let reasonString = reason.flatMap { String(data: $0, encoding: .utf8) } ?? "unknown"
-        print("🔌 [Omni] WebSocket 已断开, closeCode: \(closeCode.rawValue), reason: \(reasonString)")
+        print("🔌 [Omni] WebSocket disconnected, closeCode: \(closeCode.rawValue), reason: \(reasonString)")
     }
 }

@@ -23,12 +23,12 @@ import java.util.concurrent.TimeUnit
 /**
  * Gemini Live WebSocket Service
  * Provides real-time audio chat with Google Gemini AI
- * Uses gemini-2.0-flash-exp model for real-time audio conversation
+ * Uses gemini-2.5-flash-native-audio-preview-12-2025 model for real-time audio conversation
  * 1:1 port from iOS GeminiLiveService.swift
  */
 class GeminiLiveService(
     private val apiKey: String,
-    private val model: String = "gemini-2.0-flash-exp",
+    private val model: String = "gemini-2.5-flash-native-audio-preview-12-2025",
     private val outputLanguage: String = "zh-CN",
     private val context: Context? = null
 ) {
@@ -93,7 +93,7 @@ class GeminiLiveService(
     private var currentAudioSource = BluetoothAudioManager.AudioSource.PHONE_MIC
 
     init {
-        // 初始化蓝牙音频管理器
+        // Initialize Bluetooth audio manager
         context?.let {
             bluetoothAudioManager = BluetoothAudioManager(it)
         }
@@ -163,15 +163,15 @@ class GeminiLiveService(
     }
 
     /**
-     * 根据当前音频源获取输入采样率
+     * Get input sample rate based on current audio source
      */
     private fun getInputSampleRate(): Int {
-        // Gemini输入固定使用16kHz，与HFP兼容
+        // Gemini input uses fixed 16kHz, compatible with HFP
         return INPUT_SAMPLE_RATE
     }
 
     /**
-     * 根据当前音频源获取AudioSource
+     * Get AudioSource based on current audio source
      */
     private fun getAudioSource(): Int {
         return when (currentAudioSource) {
@@ -221,11 +221,11 @@ class GeminiLiveService(
     private fun getLiveAIPrompt(language: String): String {
         return when (language) {
             "zh-CN" -> """
-                你是RayBan Meta智能眼镜AI助手。
+                You are a RayBan Meta smart glasses AI assistant.
 
-                【重要】必须始终用中文回答，无论用户说什么语言。
+                [IMPORTANT] Always respond in Chinese.
 
-                回答要简练、口语化，像朋友聊天一样。用户戴着眼镜可以看到周围环境，根据画面快速给出有用的建议。不要啰嗦，直接说重点。
+                Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             "en-US" -> """
                 You are a RayBan Meta smart glasses AI assistant.
@@ -235,18 +235,18 @@ class GeminiLiveService(
                 Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             "ja-JP" -> """
-                あなたはRayBan Metaスマートグラスのアシスタントです。
+                You are a RayBan Meta smart glasses AI assistant.
 
-                【重要】常に日本語で回答してください。
+                [IMPORTANT] Always respond in Japanese.
 
-                回答は簡潔で会話的に、友達とチャットするように。ユーザーは眼鏡をかけて周囲を見ています。見えるものに基づいて素早く有用なアドバイスを。要点を直接伝えてください。
+                Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             "ko-KR" -> """
-                당신은 RayBan Meta 스마트 안경 AI 어시스턴트입니다.
+                You are a RayBan Meta smart glasses AI assistant.
 
-                【중요】항상 한국어로 응답하세요.
+                [IMPORTANT] Always respond in Korean.
 
-                친구와 대화하듯이 간결하고 대화적으로 답변하세요. 사용자는 안경을 착용하고 주변을 볼 수 있습니다. 보이는 것에 따라 빠르고 유용한 조언을 제공하세요. 요점만 말하세요.
+                Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             else -> getLiveAIPrompt("en-US")
         }
@@ -312,29 +312,29 @@ class GeminiLiveService(
     }
 
     /**
-     * 切换音频源
-     * @param source 目标音频源
+     * Switch audio source
+     * @param source target audio source
      */
     fun switchAudioSource(source: BluetoothAudioManager.AudioSource) {
         if (currentAudioSource == source) return
 
         val wasRecording = _isRecording.value
 
-        // 停止当前录音
+        // Stop current recording
         if (wasRecording) {
             stopRecording()
         }
 
-        // 切换音频路由
+        // Switch audio routing
         bluetoothAudioManager?.switchAudioSource(source)
         currentAudioSource = source
 
-        // 如果之前在录音，重新启动
+        // Restart recording if it was previously active
         if (wasRecording) {
             startRecording()
         }
 
-        Log.d(TAG, "音频源已切换到: $source")
+        Log.d(TAG, "Audio source switched to: $source")
     }
 
     fun updateVideoFrame(frame: Bitmap) {
@@ -539,7 +539,7 @@ class GeminiLiveService(
                 AudioFormat.ENCODING_PCM_16BIT
             )
 
-            // 根据音频源选择不同的AudioAttributes
+            // Select different AudioAttributes based on audio source
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(
                     if (currentAudioSource == BluetoothAudioManager.AudioSource.BLUETOOTH_MIC) {

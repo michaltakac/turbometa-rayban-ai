@@ -415,7 +415,7 @@ fun HealthScoreCircle(
                 color = color
             )
             Text(
-                text = "分",
+                text = "pts",
                 fontSize = 12.sp,
                 color = color
             )

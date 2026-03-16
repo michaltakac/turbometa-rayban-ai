@@ -337,15 +337,15 @@ class OmniRealtimeViewModel(application: Application) : AndroidViewModel(applica
     }
 
     /**
-     * 切换音频源（手机麦克风 / 眼镜麦克风）
+     * Switch audio source (phone microphone / glasses microphone)
      */
     fun switchAudioSource(source: BluetoothAudioManager.AudioSource) {
-        Log.d(TAG, "切换音频源到: $source")
+        Log.d(TAG, "Switching audio source to: $source")
 
-        // 切换蓝牙音频管理器的音频源
+        // Switch the Bluetooth audio manager's audio source
         bluetoothAudioManager.switchAudioSource(source)
 
-        // 通知当前活动的Service切换音频源
+        // Notify the currently active service to switch audio source
         when (_currentProvider.value) {
             LiveAIProvider.ALIBABA -> omniService?.switchAudioSource(source)
             LiveAIProvider.GOOGLE -> geminiService?.switchAudioSource(source)

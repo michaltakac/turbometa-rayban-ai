@@ -1,6 +1,6 @@
 /*
  * Food Nutrition Model
- * 食物营养数据模型
+ * Food nutrition data model
  */
 
 import Foundation
@@ -55,10 +55,10 @@ struct FoodItem: Codable, Identifiable {
 
     var healthRatingEmoji: String {
         switch healthRating {
-        case "优秀": return "🟢"
-        case "良好": return "🟡"
-        case "一般": return "🟠"
-        case "较差": return "🔴"
+        case "excellent": return "🟢"
+        case "good": return "🟡"
+        case "average": return "🟠"
+        case "poor": return "🔴"
         default: return "⚪️"
         }
     }
@@ -68,7 +68,7 @@ struct FoodItem: Codable, Identifiable {
 
 extension FoodNutritionResponse {
     var formattedTotalCalories: String {
-        "\(totalCalories) 千卡"
+        "\(totalCalories) kcal"
     }
 
     var formattedTotalProtein: String {
@@ -97,13 +97,13 @@ extension FoodNutritionResponse {
 
     var healthScoreText: String {
         if healthScore >= 80 {
-            return "非常健康"
+            return "Very Healthy"
         } else if healthScore >= 60 {
-            return "比较健康"
+            return "Fairly Healthy"
         } else if healthScore >= 40 {
-            return "一般"
+            return "Average"
         } else {
-            return "需要改善"
+            return "Needs Improvement"
         }
     }
 }

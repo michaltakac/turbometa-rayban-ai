@@ -386,8 +386,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun getAppLanguageDisplayName(): String {
         return when (_appLanguage.value) {
-            AppLanguage.SYSTEM -> "跟随系统 / System"
-            AppLanguage.CHINESE -> "中文"
+            AppLanguage.SYSTEM -> "Follow System"
+            AppLanguage.CHINESE -> "Chinese"
             AppLanguage.ENGLISH -> "English"
         }
     }

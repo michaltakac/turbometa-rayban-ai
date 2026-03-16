@@ -230,7 +230,7 @@ enum class AIModel(val id: String, val displayName: String) {
     QWEN_FLASH_REALTIME("qwen3-omni-flash-realtime", "Qwen3 Omni Flash (Realtime)"),
     QWEN_STANDARD_REALTIME("qwen3-omni-standard-realtime", "Qwen3 Omni Standard (Realtime)"),
     // Google Gemini
-    GEMINI_FLASH("gemini-2.0-flash-exp", "Gemini 2.0 Flash")
+    GEMINI_FLASH("gemini-2.5-flash-native-audio-preview-12-2025", "Gemini 2.5 Flash Native Audio")
 }
 
 // Available output languages

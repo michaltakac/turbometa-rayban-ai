@@ -1,7 +1,7 @@
 /*
  * TTS Service
- * 文本转语音服务 - 使用阿里云 qwen3-tts-flash API
- * 使用和 OmniRealtimeService 相同的 AVAudioEngine 方式播放
+ * Text-to-speech service - uses Alibaba Cloud qwen3-tts-flash API
+ * Uses the same AVAudioEngine playback method as OmniRealtimeService
  */
 
 import AVFoundation
@@ -16,20 +16,20 @@ class TTSService: NSObject, ObservableObject {
     private let baseURL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
     private let model = "qwen3-tts-flash"
 
-    // 根据当前语言设置获取语音
+    // Get voice based on current language settings
     private var voice: String {
         return LanguageManager.staticTtsVoice
     }
 
-    // 根据当前语言设置获取语言类型
+    // Get language type based on current language settings
     private var languageType: String {
         return LanguageManager.staticApiLanguageCode
     }
 
-    // 使用和 OmniRealtimeService 一样的 AVAudioEngine 方式
+    // Use the same AVAudioEngine approach as OmniRealtimeService
     private var playbackEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
-    // 使用 Float32 标准格式，兼容 iOS 18+
+    // Use Float32 standard format, compatible with iOS 18+
     private let playbackFormat = AVAudioFormat(standardFormatWithSampleRate: 24000, channels: 1)
     private var isPlaybackEngineRunning = false
 
@@ -41,7 +41,7 @@ class TTSService: NSObject, ObservableObject {
         setupPlaybackEngine()
     }
 
-    // MARK: - Audio Engine Setup (和 OmniRealtimeService 一样)
+    // MARK: - Audio Engine Setup (same as OmniRealtimeService)
 
     private func setupPlaybackEngine() {
         playbackEngine = AVAudioEngine()
@@ -50,7 +50,7 @@ class TTSService: NSObject, ObservableObject {
         guard let playbackEngine = playbackEngine,
               let playerNode = playerNode,
               let playbackFormat = playbackFormat else {
-            print("❌ [TTS] 无法初始化播放引擎")
+            print("❌ [TTS] Failed to initialize playback engine")
             return
         }
 
@@ -58,26 +58,26 @@ class TTSService: NSObject, ObservableObject {
         playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
         playbackEngine.prepare()
 
-        print("✅ [TTS] 播放引擎初始化完成: Float32 @ 24kHz")
+        print("✅ [TTS] Playback engine initialized: Float32 @ 24kHz")
     }
 
-    /// 配置音频会话（需要在启动播放引擎之前调用）
+    /// Configure audio session (must be called before starting playback engine)
     private func configureAudioSession() {
         do {
             let audioSession = AVAudioSession.sharedInstance()
 
-            // 检查当前会话状态
-            print("🔊 [TTS] 当前音频会话: category=\(audioSession.category.rawValue), mode=\(audioSession.mode.rawValue)")
+            // Check current session state
+            print("🔊 [TTS] Current audio session: category=\(audioSession.category.rawValue), mode=\(audioSession.mode.rawValue)")
 
-            // 只在需要时配置，避免与现有会话冲突
-            // 使用和 OmniRealtimeService 完全一样的设置（不要 defaultToSpeaker）
+            // Only configure when needed, avoid conflicting with existing session
+            // Use exact same settings as OmniRealtimeService (no defaultToSpeaker)
             try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .allowBluetoothA2DP])
             try audioSession.setPreferredSampleRate(24000)
             try audioSession.setActive(true, options: [.notifyOthersOnDeactivation])
-            print("✅ [TTS] Audio session 已配置")
+            print("✅ [TTS] Audio session configured")
         } catch {
-            print("⚠️ [TTS] Audio session 配置失败: \(error), 继续尝试播放...")
-            // 不要抛出错误，尝试使用现有会话播放
+            print("⚠️ [TTS] Audio session configuration failed: \(error), continuing playback attempt...")
+            // Don't throw error, try to play using existing session
         }
     }
 
@@ -89,9 +89,9 @@ class TTSService: NSObject, ObservableObject {
             try playbackEngine.start()
             playerNode?.play()
             isPlaybackEngineRunning = true
-            print("✅ [TTS] 播放引擎已启动")
+            print("✅ [TTS] Playback engine started")
         } catch {
-            print("❌ [TTS] 播放引擎启动失败: \(error)")
+            print("❌ [TTS] Failed to start playback engine: \(error)")
         }
     }
 
@@ -117,21 +117,21 @@ class TTSService: NSObject, ObservableObject {
 
     // MARK: - Public Methods
 
-    /// 预配置音频会话（在停止流之前调用）
+    /// Pre-configure audio session (call before stopping stream)
     func prepareAudioSession() {
         configureAudioSession()
-        print("🔊 [TTS] 音频会话已预配置")
+        print("🔊 [TTS] Audio session pre-configured")
     }
 
-    /// 播报文本
-    /// - 阿里云 API：使用阿里云 qwen3-tts-flash
-    /// - OpenRouter API：使用系统 TTS
+    /// Speak text
+    /// - Alibaba Cloud API: uses Alibaba Cloud qwen3-tts-flash
+    /// - OpenRouter API: uses system TTS
     func speak(_ text: String, apiKey: String? = nil) {
-        // 取消之前的任务
+        // Cancel previous task
         currentTask?.cancel()
         stop()
 
-        // OpenRouter 使用系统 TTS
+        // OpenRouter uses system TTS
         if APIProviderManager.staticCurrentProvider == .openrouter {
             print("🔊 [TTS] OpenRouter mode, using system TTS")
             isSpeaking = true
@@ -142,7 +142,7 @@ class TTSService: NSObject, ObservableObject {
             return
         }
 
-        // 阿里云：使用阿里云 TTS
+        // Alibaba Cloud: use Alibaba Cloud TTS
         let key = apiKey ?? APIKeyManager.shared.getAPIKey(for: .alibaba)
 
         guard let finalKey = key, !finalKey.isEmpty else {
@@ -165,7 +165,7 @@ class TTSService: NSObject, ObservableObject {
             } catch {
                 if !Task.isCancelled {
                     print("❌ [TTS] Error: \(error)")
-                    // 失败时回退到系统 TTS
+                    // Fall back to system TTS on failure
                     await fallbackToSystemTTS(text: text)
                 }
             }
@@ -175,7 +175,7 @@ class TTSService: NSObject, ObservableObject {
         }
     }
 
-    /// 停止播报
+    /// Stop speaking
     func stop() {
         currentTask?.cancel()
         currentTask = nil
@@ -207,7 +207,7 @@ class TTSService: NSObject, ObservableObject {
 
         print("📡 [TTS] Sending request to qwen3-tts-flash...")
 
-        // 使用 URLSession 的 bytes API 处理 SSE
+        // Use URLSession's bytes API for SSE handling
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -219,20 +219,20 @@ class TTSService: NSObject, ObservableObject {
             throw TTSError.apiError(statusCode: httpResponse.statusCode)
         }
 
-        // 先配置音频会话（如果还没配置）
+        // Configure audio session first (if not already configured)
         configureAudioSession()
 
-        // 重新初始化并启动播放引擎
+        // Reinitialize and start playback engine
         stopPlaybackEngine()
         setupPlaybackEngine()
         startPlaybackEngine()
 
-        // 提前调用 play()，让 playerNode 准备好接收 buffer
+        // Call play() early so playerNode is ready to receive buffers
         playerNode?.play()
-        print("▶️ [TTS] 播放引擎和 playerNode 已就绪")
+        print("▶️ [TTS] Playback engine and playerNode ready")
 
         guard isPlaybackEngineRunning else {
-            print("❌ [TTS] 播放引擎未运行")
+            print("❌ [TTS] Playback engine not running")
             throw TTSError.playbackFailed
         }
 
@@ -242,7 +242,7 @@ class TTSService: NSObject, ObservableObject {
         for try await line in bytes.lines {
             if Task.isCancelled { return }
 
-            // SSE 格式: "data: {...}"
+            // SSE format: "data: {...}"
             if line.hasPrefix("data:") {
                 let jsonString = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
 
@@ -261,9 +261,9 @@ class TTSService: NSObject, ObservableObject {
                     chunkCount += 1
                     totalBytes += audioData.count
                     if chunkCount == 1 {
-                        print("🔊 [TTS] 收到第一个音频片段: \(audioData.count) bytes")
+                        print("🔊 [TTS] Received first audio chunk: \(audioData.count) bytes")
                     }
-                    // 流式播放每个音频片段
+                    // Stream play each audio chunk
                     playAudioChunk(audioData)
                 }
             }
@@ -273,46 +273,46 @@ class TTSService: NSObject, ObservableObject {
 
         print("🔊 [TTS] Received \(chunkCount) chunks, \(totalBytes) bytes total")
 
-        // 等待播放完成
+        // Wait for playback to complete
         await waitForPlaybackCompletion()
 
         print("🔊 [TTS] Finished playing")
     }
 
     private func playAudioChunk(_ audioData: Data) {
-        // 跳过空数据
+        // Skip empty data
         guard !audioData.isEmpty else {
             return
         }
 
         guard let playerNode = playerNode,
               let playbackFormat = playbackFormat else {
-            print("⚠️ [TTS] playerNode 或 playbackFormat 未初始化")
+            print("⚠️ [TTS] playerNode or playbackFormat not initialized")
             return
         }
 
         guard let pcmBuffer = createPCMBuffer(from: audioData, format: playbackFormat) else {
-            print("⚠️ [TTS] 无法创建 PCM buffer, audioData.count=\(audioData.count)")
+            print("⚠️ [TTS] Failed to create PCM buffer, audioData.count=\(audioData.count)")
             return
         }
 
-        // 确保播放引擎运行中
+        // Ensure playback engine is running
         if !isPlaybackEngineRunning {
             startPlaybackEngine()
         }
 
-        // 确保 playerNode 在播放状态（和 OmniRealtimeService 一致）
+        // Ensure playerNode is in playing state (consistent with OmniRealtimeService)
         if !playerNode.isPlaying {
             playerNode.play()
-            print("▶️ [TTS] playerNode.play() 已调用")
+            print("▶️ [TTS] playerNode.play() called")
         }
 
-        // 调度音频缓冲区播放
+        // Schedule audio buffer for playback
         playerNode.scheduleBuffer(pcmBuffer)
     }
 
     private func createPCMBuffer(from data: Data, format: AVAudioFormat) -> AVAudioPCMBuffer? {
-        // 服务器发送的是 PCM16 格式，每帧 2 字节
+        // Server sends PCM16 format, 2 bytes per frame
         let frameCount = data.count / 2
         guard frameCount > 0 else {
             print("⚠️ [TTS] createPCMBuffer: frameCount is 0, data.count=\(data.count)")
@@ -331,13 +331,13 @@ class TTSService: NSObject, ObservableObject {
 
         buffer.frameLength = AVAudioFrameCount(frameCount)
 
-        // 将 PCM16 转换为 Float32（兼容 iOS 18+）
+        // Convert PCM16 to Float32 (compatible with iOS 18+)
         data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
             guard let baseAddress = bytes.baseAddress else { return }
             let int16Pointer = baseAddress.assumingMemoryBound(to: Int16.self)
             let floatData = channelData[0]
             for i in 0..<frameCount {
-                // Int16 范围 -32768 到 32767，转换为 -1.0 到 1.0
+                // Int16 range -32768 to 32767, convert to -1.0 to 1.0
                 floatData[i] = Float(int16Pointer[i]) / 32768.0
             }
         }
@@ -348,21 +348,21 @@ class TTSService: NSObject, ObservableObject {
     private func waitForPlaybackCompletion() async {
         guard let playerNode = playerNode else { return }
 
-        // 等待所有音频播放完成
+        // Wait for all audio to finish playing
         while playerNode.isPlaying {
             if Task.isCancelled { return }
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1秒
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         }
 
-        // 额外等待确保完全播放
-        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3秒
+        // Extra wait to ensure complete playback
+        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
     }
 
-    /// 回退到系统 TTS
+    /// Fall back to system TTS
     private func fallbackToSystemTTS(text: String) async {
         print("🔊 [TTS] Falling back to system TTS")
 
-        // 系统 TTS 使用 Playback 模式（不是 PlayAndRecord）
+        // System TTS uses Playback mode (not PlayAndRecord)
         do {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback, mode: .default, options: [.duckOthers])
@@ -372,13 +372,13 @@ class TTSService: NSObject, ObservableObject {
             print("⚠️ [TTS] System TTS audio session error: \(error)")
         }
 
-        // 使用实例变量保持强引用，防止被释放
+        // Use instance variable to maintain strong reference, prevent deallocation
         systemSynthesizer = AVSpeechSynthesizer()
 
         guard let synthesizer = systemSynthesizer else { return }
 
         let utterance = AVSpeechUtterance(string: text)
-        // 根据当前语言设置选择系统语音
+        // Select system voice based on current language settings
         let voiceLanguage = LanguageManager.staticIsChinese ? "zh-CN" : "en-US"
         utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.0
@@ -388,10 +388,10 @@ class TTSService: NSObject, ObservableObject {
         print("🔊 [TTS] System TTS speaking: \(text.prefix(30))...")
         synthesizer.speak(utterance)
 
-        // 等待一小段时间让播放开始
+        // Wait briefly for playback to start
         try? await Task.sleep(nanoseconds: 100_000_000)
 
-        // 等待播放完成
+        // Wait for playback to complete
         while synthesizer.isSpeaking {
             if Task.isCancelled {
                 synthesizer.stopSpeaking(at: .immediate)
@@ -418,15 +418,15 @@ enum TTSError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noAPIKey:
-            return "未配置 API Key"
+            return "API Key not configured"
         case .invalidResponse:
-            return "无效的响应"
+            return "Invalid response"
         case .apiError(let statusCode):
-            return "API 错误: \(statusCode)"
+            return "API error: \(statusCode)"
         case .noAudioData:
-            return "未收到音频数据"
+            return "No audio data received"
         case .playbackFailed:
-            return "音频播放失败"
+            return "Audio playback failed"
         }
     }
 }

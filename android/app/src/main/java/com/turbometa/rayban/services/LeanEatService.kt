@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.util.Base64
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.turbometa.rayban.managers.APIProvider
+import com.turbometa.rayban.managers.APIProviderManager
 import com.turbometa.rayban.models.FoodItem
 import com.turbometa.rayban.models.FoodNutritionResponse
 import kotlinx.coroutines.Dispatchers
@@ -15,45 +17,48 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
-class LeanEatService(private val apiKey: String) {
+class LeanEatService(
+    private val apiKey: String,
+    private val baseURL: String = APIProviderManager.staticBaseURL,
+    private val model: String = APIProviderManager.staticCurrentModel,
+    private val provider: APIProvider = APIProviderManager.staticCurrentProvider
+) {
 
     companion object {
-        private const val BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-        private const val MODEL = "qwen-vl-plus"
 
         private val NUTRITION_PROMPT = """
-请分析这张图片中的食物，并以JSON格式返回营养分析结果。
+Please analyze the food in this image and return the nutrition analysis results in JSON format.
 
-请严格按照以下JSON格式返回（不要包含任何其他文字）：
+Please strictly follow this JSON format (do not include any other text):
 {
   "foods": [
     {
-      "name": "食物名称",
-      "portion": "份量描述",
-      "calories": 热量数值(整数),
-      "protein": 蛋白质克数(小数),
-      "fat": 脂肪克数(小数),
-      "carbs": 碳水化合物克数(小数),
-      "fiber": 膳食纤维克数(小数或null),
-      "sugar": 糖克数(小数或null),
-      "healthRating": "优秀/良好/一般/较差"
+      "name": "Food name",
+      "portion": "Portion description",
+      "calories": calorie value (integer),
+      "protein": protein in grams (decimal),
+      "fat": fat in grams (decimal),
+      "carbs": carbohydrates in grams (decimal),
+      "fiber": dietary fiber in grams (decimal or null),
+      "sugar": sugar in grams (decimal or null),
+      "healthRating": "Excellent/Good/Fair/Poor"
     }
   ],
-  "totalCalories": 总热量(整数),
-  "totalProtein": 总蛋白质(小数),
-  "totalFat": 总脂肪(小数),
-  "totalCarbs": 总碳水(小数),
-  "healthScore": 0-100的健康评分(整数),
-  "suggestions": ["建议1", "建议2", "建议3"]
+  "totalCalories": total calories (integer),
+  "totalProtein": total protein (decimal),
+  "totalFat": total fat (decimal),
+  "totalCarbs": total carbs (decimal),
+  "healthScore": health score from 0-100 (integer),
+  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
 }
 
-健康评分标准：
-- 80-100: 优秀（低脂、高蛋白、富含纤维）
-- 60-79: 良好（营养较均衡）
-- 40-59: 一般（可能高脂或高糖）
-- 0-39: 较差（高热量、低营养）
+Health score criteria:
+- 80-100: Excellent (low fat, high protein, rich in fiber)
+- 60-79: Good (relatively balanced nutrition)
+- 40-59: Fair (possibly high fat or high sugar)
+- 0-39: Poor (high calorie, low nutrition)
 
-请只返回JSON，不要有任何其他解释文字。
+Please only return JSON, without any other explanatory text.
 """.trimIndent()
     }
 
@@ -70,10 +75,18 @@ class LeanEatService(private val apiKey: String) {
             val base64Image = encodeImageToBase64(image)
             val requestBody = buildRequestBody(base64Image)
 
-            val request = Request.Builder()
-                .url(BASE_URL)
+            val requestBuilder = Request.Builder()
+                .url("$baseURL/chat/completions")
                 .addHeader("Authorization", "Bearer $apiKey")
                 .addHeader("Content-Type", "application/json")
+
+            // Add OpenRouter-specific headers
+            if (provider == APIProvider.OPENROUTER) {
+                requestBuilder.addHeader("HTTP-Referer", "https://turbometa.app")
+                requestBuilder.addHeader("X-Title", "TurboMeta")
+            }
+
+            val request = requestBuilder
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
                 .build()
 
@@ -126,7 +139,7 @@ class LeanEatService(private val apiKey: String) {
         )
 
         val request = mapOf(
-            "model" to MODEL,
+            "model" to model,
             "messages" to messages,
             "max_tokens" to 2000
         )
@@ -184,7 +197,7 @@ class LeanEatService(private val apiKey: String) {
                         carbs = food.get("carbs")?.asDouble ?: 0.0,
                         fiber = food.get("fiber")?.asDouble,
                         sugar = food.get("sugar")?.asDouble,
-                        healthRating = food.get("healthRating")?.asString ?: "良好"
+                        healthRating = food.get("healthRating")?.asString ?: "Good"
                     )
                 )
             }

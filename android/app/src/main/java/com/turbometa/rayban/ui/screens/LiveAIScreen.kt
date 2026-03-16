@@ -624,7 +624,7 @@ private fun getInstructionText(
 }
 
 /**
- * 音频源切换组件
+ * Audio source toggle component
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -639,11 +639,11 @@ private fun AudioSourceToggle(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // 手机麦克风按钮
+        // Phone microphone button
         FilterChip(
             selected = currentSource == BluetoothAudioManager.AudioSource.PHONE_MIC,
             onClick = { onSourceChange(BluetoothAudioManager.AudioSource.PHONE_MIC) },
-            label = { Text("手机麦克风") },
+            label = { Text("Phone Mic") },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.PhoneAndroid,
@@ -653,11 +653,11 @@ private fun AudioSourceToggle(
             }
         )
 
-        // 眼镜麦克风按钮
+        // Glasses microphone button
         FilterChip(
             selected = currentSource == BluetoothAudioManager.AudioSource.BLUETOOTH_MIC,
             onClick = { onSourceChange(BluetoothAudioManager.AudioSource.BLUETOOTH_MIC) },
-            label = { Text("眼镜麦克风") },
+            label = { Text("Glasses Mic") },
             enabled = isBluetoothAvailable,
             leadingIcon = {
                 Icon(

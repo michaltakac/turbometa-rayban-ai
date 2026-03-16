@@ -28,7 +28,7 @@ import com.turbometa.rayban.ui.theme.*
 
 /**
  * Quick Vision Mode Settings Screen
- * 快速识图模式设置界面
+ * Quick vision mode settings interface
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,7 +134,7 @@ fun QuickVisionModeScreen(
 
 /**
  * Live AI Mode Settings Screen
- * 实时对话模式设置界面
+ * Real-time conversation mode settings interface
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

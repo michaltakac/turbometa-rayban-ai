@@ -1,6 +1,6 @@
 /*
  * Settings View
- * 个人中心 - 设备管理和设置
+ * Profile Center - Device management and settings
  */
 
 import SwiftUI
@@ -26,17 +26,17 @@ struct SettingsView: View {
     @ObservedObject var quickVisionModeManager = QuickVisionModeManager.shared
     @ObservedObject var liveAIModeManager = LiveAIModeManager.shared
     @State private var selectedModel = "qwen3-omni-flash-realtime"
-    @State private var selectedLanguage = "zh-CN" // 默认中文
+    @State private var selectedLanguage = "zh-CN" // Default Chinese
     @State private var selectedQuality = UserDefaults.standard.string(forKey: "video_quality") ?? "medium"
-    @State private var hasAPIKey = false // 改为 State 变量
-    @State private var hasGoogleAPIKey = false // Google API Key 状态
+    @State private var hasAPIKey = false // Changed to State variable
+    @State private var hasGoogleAPIKey = false // Google API Key status
 
     init(streamViewModel: StreamSessionViewModel, apiKey: String) {
         self.streamViewModel = streamViewModel
         self.apiKey = apiKey
     }
 
-    // 刷新 API Key 状态
+    // Refresh API Key status
     private func refreshAPIKeyStatus() {
         hasAPIKey = providerManager.hasAPIKey
         hasGoogleAPIKey = APIKeyManager.shared.hasGoogleAPIKey()
@@ -45,9 +45,9 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             List {
-                // 设备管理
+                // Device management
                 Section {
-                    // 连接状态
+                    // Connection status
                     HStack {
                         Image(systemName: "eye.circle.fill")
                             .foregroundColor(AppColors.primary)
@@ -64,14 +64,14 @@ struct SettingsView: View {
 
                         Spacer()
 
-                        // 连接状态指示器
+                        // Connection status indicator
                         Circle()
                             .fill(streamViewModel.hasActiveDevice ? Color.green : Color.gray)
                             .frame(width: 12, height: 12)
                     }
                     .padding(.vertical, AppSpacing.sm)
 
-                    // 设备信息
+                    // Device info
                     if streamViewModel.hasActiveDevice {
                         InfoRow(title: "settings.device.status".localized, value: "settings.device.online".localized)
 
@@ -81,15 +81,15 @@ struct SettingsView: View {
                             InfoRow(title: "settings.device.stream".localized, value: "settings.device.stream.inactive".localized)
                         }
 
-                        // TODO: 从 SDK 获取更多设备信息
-                        // InfoRow(title: "电量", value: "85%")
-                        // InfoRow(title: "固件版本", value: "v20.0")
+                        // TODO: Get more device info from SDK
+                        // InfoRow(title: "Battery", value: "85%")
+                        // InfoRow(title: "Firmware Version", value: "v20.0")
                     }
                 } header: {
                     Text("settings.device".localized)
                 }
 
-                // AI 设置
+                // AI settings
                 Section {
                     Button {
                         showAppLanguageSettings = true
@@ -223,7 +223,7 @@ struct SettingsView: View {
                     Text("settings.ai".localized)
                 }
 
-                // Live AI 设置
+                // Live AI settings
                 Section {
                     // Live AI Provider
                     Button {
@@ -303,7 +303,7 @@ struct SettingsView: View {
                     Text("settings.liveai".localized)
                 }
 
-                // 关于
+                // About
                 Section {
                     InfoRow(title: "settings.version".localized, value: "1.5.0")
                     InfoRow(title: "settings.sdkversion".localized, value: "0.3.0")
@@ -320,7 +320,7 @@ struct SettingsView: View {
                 }
             }
             .onChange(of: showAPIKeySettings) { isShowing in
-                // 当 API Key 设置界面关闭时，刷新状态
+                // Refresh status when API Key settings view closes
                 if !isShowing {
                     refreshAPIKeyStatus()
                 }
@@ -352,7 +352,7 @@ struct SettingsView: View {
                 GoogleAPIKeySettingsView()
             }
             .onChange(of: showGoogleAPIKeySettings) { isShowing in
-                // 当 Google API Key 设置界面关闭时，刷新状态
+                // Refresh status when Google API Key settings view closes
                 if !isShowing {
                     refreshAPIKeyStatus()
                 }
@@ -367,7 +367,7 @@ struct SettingsView: View {
                 LiveTranslateSettingsView(viewModel: LiveTranslateViewModel())
             }
             .onAppear {
-                // 视图出现时刷新 API Key 状态
+                // Refresh API Key status when view appears
                 refreshAPIKeyStatus()
             }
         }
@@ -375,22 +375,22 @@ struct SettingsView: View {
 
     private func languageDisplayName(_ code: String) -> String {
         switch code {
-        case "zh-CN": return "中文"
+        case "zh-CN": return "Chinese"
         case "en-US": return "English"
-        case "ja-JP": return "日本語"
-        case "ko-KR": return "한국어"
-        case "es-ES": return "Español"
-        case "fr-FR": return "Français"
-        default: return "中文"
+        case "ja-JP": return "Japanese"
+        case "ko-KR": return "Korean"
+        case "es-ES": return "Spanish"
+        case "fr-FR": return "French"
+        default: return "Chinese"
         }
     }
 
     private func qualityDisplayName(_ code: String) -> String {
         switch code {
-        case "low": return "低画质"
-        case "medium": return "中画质"
-        case "high": return "高画质"
-        default: return "中画质"
+        case "low": return "Low Quality"
+        case "medium": return "Medium Quality"
+        case "high": return "High Quality"
+        default: return "Medium Quality"
         }
     }
 }
@@ -829,12 +829,12 @@ struct LanguageSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     let languages = [
-        ("zh-CN", "中文"),
+        ("zh-CN", "Chinese"),
         ("en-US", "English"),
-        ("ja-JP", "日本語"),
-        ("ko-KR", "한국어"),
-        ("es-ES", "Español"),
-        ("fr-FR", "Français")
+        ("ja-JP", "Japanese"),
+        ("ko-KR", "Korean"),
+        ("es-ES", "Spanish"),
+        ("fr-FR", "French")
     ]
 
     var body: some View {
@@ -857,16 +857,16 @@ struct LanguageSettingsView: View {
                         }
                     }
                 } header: {
-                    Text("选择输出语言")
+                    Text("Select Output Language")
                 } footer: {
-                    Text("AI 将使用该语言进行语音输出和文字回复")
+                    Text("AI will use this language for voice output and text responses")
                 }
             }
-            .navigationTitle("输出语言")
+            .navigationTitle("Output Language")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button("Done") {
                         dismiss()
                     }
                 }
@@ -947,7 +947,7 @@ struct AppLanguageSettingsView: View {
                 Section {
                     ForEach(AppLanguage.allCases, id: \.self) { language in
                         Button {
-                            // 只有选择不同语言时才提示重启
+                            // Only prompt restart when selecting a different language
                             if languageManager.currentLanguage != language {
                                 pendingLanguage = language
                                 showRestartAlert = true
@@ -986,7 +986,7 @@ struct AppLanguageSettingsView: View {
                 Button("settings.applanguage.restart.confirm".localized) {
                     if let language = pendingLanguage {
                         languageManager.currentLanguage = language
-                        // 延迟一点退出，确保设置已保存
+                        // Delay exit slightly to ensure settings are saved
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             exit(0)
                         }

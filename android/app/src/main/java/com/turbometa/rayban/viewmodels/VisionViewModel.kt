@@ -53,11 +53,11 @@ class VisionViewModel(application: Application) : AndroidViewModel(application) 
 
     companion object {
         private val DEFAULT_PROMPTS = listOf(
-            "请描述这张图片中你看到的内容，包括主要物体、场景和任何有趣的细节。",
+            "Please describe what you see in this image, including the main objects, scene, and any interesting details.",
             "What do you see in this image? Describe the main objects, scene, and any interesting details.",
-            "请识别图片中的文字内容。",
+            "Please identify and read any text in the image.",
             "Please identify and read any text visible in this image.",
-            "这是什么？请详细说明。",
+            "What is this? Please explain in detail.",
             "What is this? Please explain in detail."
         )
     }

@@ -1,6 +1,6 @@
 /*
  * LeanEat ViewModel
- * 食物营养分析视图模型
+ * Food nutrition analysis view model
  */
 
 import Foundation
@@ -29,13 +29,13 @@ class LeanEatViewModel: ObservableObject {
         nutritionData = nil
 
         do {
-            print("🍎 [LeanEat] 开始分析食物营养...")
+            print("🍎 [LeanEat] Starting food nutrition analysis...")
             let result = try await service.analyzeFood(photo)
             nutritionData = result
-            print("✅ [LeanEat] 分析完成: \(result.foods.count) 种食物")
+            print("✅ [LeanEat] Analysis complete: \(result.foods.count) food item(s)")
         } catch {
             errorMessage = error.localizedDescription
-            print("❌ [LeanEat] 分析失败: \(error)")
+            print("❌ [LeanEat] Analysis failed: \(error)")
         }
 
         isAnalyzing = false

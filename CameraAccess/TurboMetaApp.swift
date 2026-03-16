@@ -59,7 +59,7 @@ struct TurboMetaApp: App {
           Text(wearablesViewModel.errorMessage)
         }
         #if DEBUG
-      // Bug 图标已隐藏
+      // Bug icon hidden
       // .sheet(isPresented: $debugMenuViewModel.showDebugMenu) {
       //   MockDeviceKitView(viewModel: debugMenuViewModel.mockDeviceKitViewModel)
       // }

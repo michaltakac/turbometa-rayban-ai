@@ -5,16 +5,16 @@ import com.turbometa.rayban.R
 
 /**
  * Quick Vision Modes
- * 快速识图模式 - 不同场景的识图助手
+ * Quick vision modes - image recognition assistants for different scenarios
  */
 enum class QuickVisionMode(val id: String) {
-    STANDARD("standard"),       // 默认模式
-    HEALTH("health"),           // 健康识图
-    BLIND("blind"),             // 盲人模式
-    READING("reading"),         // 阅读模式
-    TRANSLATE("translate"),     // 翻译模式
-    ENCYCLOPEDIA("encyclopedia"), // 百科（博物馆）模式
-    CUSTOM("custom");           // 自定义提示词
+    STANDARD("standard"),       // Default mode
+    HEALTH("health"),           // Health recognition
+    BLIND("blind"),             // Blind assistance mode
+    READING("reading"),         // Reading mode
+    TRANSLATE("translate"),     // Translation mode
+    ENCYCLOPEDIA("encyclopedia"), // Encyclopedia (museum) mode
+    CUSTOM("custom");           // Custom prompt
 
     fun getDisplayName(context: Context): String {
         return when (this) {
@@ -42,7 +42,7 @@ enum class QuickVisionMode(val id: String) {
 
 
     /**
-     * 获取模式对应的提示词（不包括翻译和自定义，这两个需要动态生成）
+     * Get the prompt for this mode (excluding translate and custom, which need dynamic generation)
      */
     fun getPrompt(context: Context): String {
         return when (this) {
@@ -50,9 +50,9 @@ enum class QuickVisionMode(val id: String) {
             HEALTH -> context.getString(R.string.prompt_quickvision_health)
             BLIND -> context.getString(R.string.prompt_quickvision_blind)
             READING -> context.getString(R.string.prompt_quickvision_reading)
-            TRANSLATE -> "" // 需要通过 Manager 获取（包含目标语言）
+            TRANSLATE -> "" // Needs to be obtained through Manager (includes target language)
             ENCYCLOPEDIA -> context.getString(R.string.prompt_quickvision_encyclopedia)
-            CUSTOM -> "" // 需要通过 Manager 获取自定义内容
+            CUSTOM -> "" // Needs to be obtained through Manager for custom content
         }
     }
 

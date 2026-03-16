@@ -84,8 +84,8 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
     private lateinit var quickVisionStorage: QuickVisionStorage
     private lateinit var modeManager: QuickVisionModeManager
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var systemLocale: Locale = Locale.getDefault()  // 系统语言，用于状态提示
-    private var outputLocale: Locale = Locale.US  // 输出语言，用于AI回复
+    private var systemLocale: Locale = Locale.getDefault()  // System language, for status prompts
+    private var outputLocale: Locale = Locale.US  // Output language, for AI replies
 
     // DAT SDK components
     private val deviceSelector = AutoDeviceSelector()
@@ -114,10 +114,10 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         Log.d(TAG, "TTS onInit called with status: $status")
         if (status == TextToSpeech.SUCCESS) {
-            // 保存系统语言（用于状态提示）
+            // Save system language (for status prompts)
             systemLocale = Locale.getDefault()
 
-            // 保存输出语言（用于AI回复）
+            // Save output language (for AI replies)
             val language = apiKeyManager.getOutputLanguage()
             outputLocale = when (language) {
                 "zh-CN" -> Locale.CHINESE
@@ -129,7 +129,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
                 else -> Locale.US
             }
 
-            // 初始使用系统语言（状态提示用）
+            // Initially use system language (for status prompts)
             val result = tts?.setLanguage(systemLocale)
             isTtsReady = result != TextToSpeech.LANG_MISSING_DATA &&
                     result != TextToSpeech.LANG_NOT_SUPPORTED
@@ -201,7 +201,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
                     }
                 }
 
-                // 1. Announce "正在识别"
+                // 1. Announce "Looking"
                 val lookingText = getLocalizedString("looking")
                 Log.d(TAG, "Speaking: $lookingText")
                 speak(lookingText)
@@ -293,7 +293,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
 
                             broadcastResult(description)
                             broadcastStatus("complete")
-                            speakAndWait(description, useOutputLocale = true)  // AI回复使用输出语言
+                            speakAndWait(description, useOutputLocale = true)  // AI reply uses output language
                         },
                         onFailure = { error ->
                             Log.e(TAG, "Analysis failed: ${error.message}")
@@ -362,7 +362,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
 
     private fun speak(text: String, useOutputLocale: Boolean = false) {
         if (!isTtsReady || text.isBlank()) return
-        // 根据需要切换语言
+        // Switch language as needed
         tts?.setLanguage(if (useOutputLocale) outputLocale else systemLocale)
         Log.d(TAG, "Speaking: $text (locale: ${if (useOutputLocale) outputLocale else systemLocale})")
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "qv_${System.currentTimeMillis()}")
@@ -390,51 +390,51 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
             }
         })
 
-        // 根据需要切换语言
+        // Switch language as needed
         tts?.setLanguage(if (useOutputLocale) outputLocale else systemLocale)
         Log.d(TAG, "Speaking (wait): $text (locale: ${if (useOutputLocale) outputLocale else systemLocale})")
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
     }
 
     private fun getLocalizedString(key: String): String {
-        // 使用系统语言来显示状态提示
+        // Use system language for status prompts
         val isChinese = systemLocale.language == "zh"
         val isJapanese = systemLocale.language == "ja"
         val isKorean = systemLocale.language == "ko"
 
         return when (key) {
             "looking" -> when {
-                isChinese -> "正在识别"
+                isChinese -> "Identifying"
                 isJapanese -> "確認中"
                 isKorean -> "확인 중"
                 else -> "Looking"
             }
             "analyzing" -> when {
-                isChinese -> "正在分析..."
+                isChinese -> "Analyzing..."
                 isJapanese -> "分析中..."
                 isKorean -> "분석 중..."
                 else -> "Analyzing..."
             }
             "no_device" -> when {
-                isChinese -> "眼镜未连接"
+                isChinese -> "Glasses not connected"
                 isJapanese -> "メガネが接続されていません"
                 isKorean -> "안경이 연결되어 있지 않습니다"
                 else -> "Glasses not connected"
             }
             "no_image" -> when {
-                isChinese -> "无法获取图像"
+                isChinese -> "Unable to capture image"
                 isJapanese -> "画像を取得できません"
                 isKorean -> "이미지를 캡처할 수 없습니다"
                 else -> "Unable to capture image"
             }
             "error" -> when {
-                isChinese -> "发生错误"
+                isChinese -> "An error occurred"
                 isJapanese -> "エラーが発生しました"
                 isKorean -> "오류가 발생했습니다"
                 else -> "An error occurred"
             }
             "analysis_failed" -> when {
-                isChinese -> "图像分析失败"
+                isChinese -> "Image analysis failed"
                 isJapanese -> "画像分析に失敗しました"
                 isKorean -> "이미지 분석 실패"
                 else -> "Image analysis failed"

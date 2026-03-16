@@ -1,6 +1,6 @@
 /*
  * TurboMeta Home View
- * 主页 - 功能入口
+ * Home page - Feature entry points
  */
 
 import SwiftUI
@@ -138,13 +138,13 @@ struct TurboMetaHomeView: View {
             }
         }
         .onAppear {
-            // 确保 QuickVisionManager 有 streamViewModel 引用
+            // Ensure QuickVisionManager has streamViewModel reference
             quickVisionManager.setStreamViewModel(streamViewModel)
-            // 确保 LiveAIManager 有 streamViewModel 引用
+            // Ensure LiveAIManager has streamViewModel reference
             liveAIManager.setStreamViewModel(streamViewModel)
         }
         .onReceive(NotificationCenter.default.publisher(for: .liveAITriggered)) { _ in
-            // 从快捷指令触发，自动打开 Live AI 界面
+            // Triggered from shortcut, automatically open Live AI view
             showLiveAI = true
         }
     }

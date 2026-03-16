@@ -90,7 +90,7 @@ class OmniRealtimeService(
     private var currentAudioSource = BluetoothAudioManager.AudioSource.PHONE_MIC
 
     init {
-        // 初始化蓝牙音频管理器
+        // Initialize Bluetooth audio manager
         context?.let {
             bluetoothAudioManager = BluetoothAudioManager(it)
         }
@@ -98,7 +98,7 @@ class OmniRealtimeService(
 
     private var pendingImageFrame: Bitmap? = null
     private var lastImageSentTime = 0L
-    private val imageSendIntervalMs = 500L  // 发送图片的间隔（毫秒）
+    private val imageSendIntervalMs = 500L  // Image send interval (milliseconds)
 
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -158,17 +158,17 @@ class OmniRealtimeService(
     }
 
     /**
-     * 根据当前音频源获取采样率
+     * Get sample rate based on current audio source
      */
     private fun getSampleRate(): Int {
         return when (currentAudioSource) {
-            BluetoothAudioManager.AudioSource.BLUETOOTH_MIC -> 16000  // HFP标准
+            BluetoothAudioManager.AudioSource.BLUETOOTH_MIC -> 16000  // HFP standard
             BluetoothAudioManager.AudioSource.PHONE_MIC -> SAMPLE_RATE  // 24000
         }
     }
 
     /**
-     * 根据当前音频源获取AudioSource
+     * Get AudioSource based on current audio source
      */
     private fun getAudioSource(): Int {
         return when (currentAudioSource) {
@@ -199,7 +199,7 @@ class OmniRealtimeService(
 
             audioRecord?.startRecording()
             _isRecording.value = true
-            lastImageSentTime = 0  // 重置，确保立即发送第一张图片
+            lastImageSentTime = 0  // Reset to ensure the first image is sent immediately
 
             recordingJob = scope.launch {
                 val buffer = ByteArray(bufferSize)
@@ -228,29 +228,29 @@ class OmniRealtimeService(
     }
 
     /**
-     * 切换音频源
-     * @param source 目标音频源
+     * Switch audio source
+     * @param source target audio source
      */
     fun switchAudioSource(source: BluetoothAudioManager.AudioSource) {
         if (currentAudioSource == source) return
 
         val wasRecording = _isRecording.value
 
-        // 停止当前录音
+        // Stop current recording
         if (wasRecording) {
             stopRecording()
         }
 
-        // 切换音频路由
+        // Switch audio routing
         bluetoothAudioManager?.switchAudioSource(source)
         currentAudioSource = source
 
-        // 如果之前在录音，重新启动
+        // Restart recording if it was previously active
         if (wasRecording) {
             startRecording()
         }
 
-        Log.d(TAG, "音频源已切换到: $source")
+        Log.d(TAG, "Audio source switched to: $source")
     }
 
     fun updateVideoFrame(frame: Bitmap) {
@@ -291,11 +291,11 @@ class OmniRealtimeService(
     private fun getLiveAIPrompt(language: String): String {
         return when (language) {
             "zh-CN" -> """
-                你是RayBan Meta智能眼镜AI助手。
+                You are a RayBan Meta smart glasses AI assistant.
 
-                【重要】必须始终用中文回答，无论用户说什么语言。
+                [IMPORTANT] Always respond in Chinese.
 
-                回答要简练、口语化，像朋友聊天一样。用户戴着眼镜可以看到周围环境，根据画面快速给出有用的建议。不要啰嗦，直接说重点。
+                Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             "en-US" -> """
                 You are a RayBan Meta smart glasses AI assistant.
@@ -305,18 +305,18 @@ class OmniRealtimeService(
                 Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             "ja-JP" -> """
-                あなたはRayBan Metaスマートグラスのアシスタントです。
+                You are a RayBan Meta smart glasses AI assistant.
 
-                【重要】常に日本語で回答してください。
+                [IMPORTANT] Always respond in Japanese.
 
-                回答は簡潔で会話的に、友達とチャットするように。ユーザーは眼鏡をかけて周囲を見ています。見えるものに基づいて素早く有用なアドバイスを。要点を直接伝えてください。
+                Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             "ko-KR" -> """
-                당신은 RayBan Meta 스마트 안경 AI 어시스턴트입니다.
+                You are a RayBan Meta smart glasses AI assistant.
 
-                【중요】항상 한국어로 응답하세요.
+                [IMPORTANT] Always respond in Korean.
 
-                친구와 대화하듯이 간결하고 대화적으로 답변하세요. 사용자는 안경을 착용하고 주변을 볼 수 있습니다. 보이는 것에 따라 빠르고 유용한 조언을 제공하세요. 요점만 말하세요.
+                Keep your answers concise and conversational, like chatting with a friend. The user is wearing glasses and can see their surroundings, provide quick and useful suggestions based on what they see. Be direct and to the point.
             """.trimIndent()
             else -> getLiveAIPrompt("en-US")
         }
@@ -333,7 +333,7 @@ class OmniRealtimeService(
 
         webSocket?.send(gson.toJson(message))
 
-        // 定期发送图片（每 500ms 发送一次）
+        // Send image periodically (every 500ms)
         val currentTime = System.currentTimeMillis()
         if (pendingImageFrame != null && (currentTime - lastImageSentTime >= imageSendIntervalMs)) {
             lastImageSentTime = currentTime
@@ -423,14 +423,14 @@ class OmniRealtimeService(
 
     private fun startAudioPlayback() {
         if (audioTrack == null) {
-            // 输出采样率固定使用AI返回的采样率（24kHz）
+            // Output sample rate fixed to AI-returned sample rate (24kHz)
             val bufferSize = AudioTrack.getMinBufferSize(
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
 
-            // 根据音频源选择不同的AudioAttributes
+            // Select different AudioAttributes based on audio source
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(
                     if (currentAudioSource == BluetoothAudioManager.AudioSource.BLUETOOTH_MIC) {

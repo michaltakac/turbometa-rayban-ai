@@ -28,7 +28,7 @@ struct StreamView: View {
       Color.black
         .edgesIgnoringSafeArea(.all)
 
-      // 未连接设备提醒
+      // Device not connected notice
       if !viewModel.hasActiveDevice {
         deviceNotConnectedView
       } else {
@@ -67,15 +67,15 @@ struct StreamView: View {
       }
     }
     .onAppear {
-      // 只有设备连接时才启动视频流
+      // Only start video stream when device is connected
       guard viewModel.hasActiveDevice else {
-        print("⚠️ StreamView: 未连接RayBan Meta眼镜，跳过启动")
+        print("⚠️ StreamView: RayBan Meta glasses not connected, skipping start")
         return
       }
 
-      // 自动启动视频流
+      // Auto-start video stream
       Task {
-        print("🎥 StreamView: 启动视频流")
+        print("🎥 StreamView: Starting video stream")
         await viewModel.handleStartStreaming()
       }
     }
@@ -143,11 +143,11 @@ struct StreamView: View {
           .font(.system(size: 80))
           .foregroundColor(.white.opacity(0.6))
 
-        Text("未连接RayBan Meta眼镜")
+        Text("RayBan Meta Glasses Not Connected")
           .font(AppTypography.title2)
           .foregroundColor(.white)
 
-        Text("请先在首页连接你的智能眼镜，\n然后再使用直播功能")
+        Text("Please connect your smart glasses from the home page first,\nthen use the livestream feature")
           .font(AppTypography.body)
           .foregroundColor(.white.opacity(0.8))
           .multilineTextAlignment(.center)
@@ -156,13 +156,13 @@ struct StreamView: View {
 
       Spacer()
 
-      // 返回按钮
+      // Back button
       Button {
         dismiss()
       } label: {
         HStack(spacing: AppSpacing.sm) {
           Image(systemName: "chevron.left")
-          Text("返回首页")
+          Text("Back to Home")
             .font(AppTypography.headline)
         }
         .frame(maxWidth: .infinity)

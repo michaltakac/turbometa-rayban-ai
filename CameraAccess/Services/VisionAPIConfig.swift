@@ -41,7 +41,7 @@ struct VisionAPIConfig {
     // MARK: - Default Models
 
     static let defaultAlibabaModel = "qwen3-vl-plus"
-    static let defaultOpenRouterModel = "google/gemini-3-flash-preview"
+    static let defaultOpenRouterModel = "qwen/qwen-vl-plus"
 
     // MARK: - Request Headers
 

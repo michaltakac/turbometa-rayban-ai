@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * API Provider Manager
- * 管理不同的 API 提供商 (阿里云 Dashscope / OpenRouter / Google)
+ * Manages different API providers (Alibaba Cloud Dashscope / OpenRouter / Google)
  * 1:1 port from iOS APIProviderManager.swift
  */
 
@@ -26,8 +26,8 @@ enum class AlibabaEndpoint(val id: String) {
 
     val displayName: String
         get() = when (this) {
-            BEIJING -> "北京 (中国大陆)"
-            SINGAPORE -> "新加坡 (国际)"
+            BEIJING -> "Beijing (Mainland China)"
+            SINGAPORE -> "Singapore (International)"
         }
 
     val displayNameEn: String
@@ -63,7 +63,7 @@ enum class APIProvider(val id: String) {
 
     val displayName: String
         get() = when (this) {
-            ALIBABA -> "阿里云 Dashscope"
+            ALIBABA -> "Alibaba Cloud Dashscope"
             OPENROUTER -> "OpenRouter"
         }
 
@@ -83,7 +83,7 @@ enum class APIProvider(val id: String) {
     val defaultModel: String
         get() = when (this) {
             ALIBABA -> "qwen-vl-flash"
-            OPENROUTER -> "google/gemini-2.0-flash-001"
+            OPENROUTER -> "qwen/qwen-vl-plus"
         }
 
     val apiKeyHelpURL: String
@@ -97,7 +97,7 @@ enum class APIProvider(val id: String) {
 
     companion object {
         fun fromId(id: String): APIProvider {
-            return entries.find { it.id == id } ?: ALIBABA
+            return entries.find { it.id == id } ?: OPENROUTER
         }
     }
 }
@@ -110,7 +110,7 @@ enum class LiveAIProvider(val id: String) {
 
     val displayName: String
         get() = when (this) {
-            ALIBABA -> "阿里云 Qwen Omni"
+            ALIBABA -> "Alibaba Cloud Qwen Omni"
             GOOGLE -> "Google Gemini Live"
         }
 
@@ -123,7 +123,7 @@ enum class LiveAIProvider(val id: String) {
     val defaultModel: String
         get() = when (this) {
             ALIBABA -> "qwen3-omni-flash-realtime"
-            GOOGLE -> "gemini-2.0-flash-exp"
+            GOOGLE -> "gemini-2.5-flash-native-audio-preview-12-2025"
         }
 
     val apiKeyHelpURL: String
@@ -211,22 +211,22 @@ data class AlibabaVisionModel(
             AlibabaVisionModel(
                 "qwen-vl-flash",
                 "Qwen VL Flash",
-                "快速响应，适合实时场景"
+                "Fast response, suitable for real-time scenarios"
             ),
             AlibabaVisionModel(
                 "qwen-vl-plus",
                 "Qwen VL Plus",
-                "均衡性能，推荐日常使用"
+                "Balanced performance, recommended for daily use"
             ),
             AlibabaVisionModel(
                 "qwen-vl-max",
                 "Qwen VL Max",
-                "最强性能，适合复杂任务"
+                "Best performance, suitable for complex tasks"
             ),
             AlibabaVisionModel(
                 "qwen2.5-vl-72b-instruct",
                 "Qwen 2.5 VL 72B",
-                "大参数模型，高精度分析"
+                "Large parameter model, high-precision analysis"
             )
         )
     }
@@ -258,7 +258,7 @@ class APIProviderManager private constructor(context: Context) {
 
         val staticCurrentProvider: APIProvider
             get() {
-                val id = prefs?.getString(KEY_PROVIDER, "alibaba") ?: "alibaba"
+                val id = prefs?.getString(KEY_PROVIDER, "openrouter") ?: "openrouter"
                 return APIProvider.fromId(id)
             }
 
@@ -298,12 +298,12 @@ class APIProviderManager private constructor(context: Context) {
 
     // Vision API Provider
     private val _currentProvider = MutableStateFlow(
-        APIProvider.fromId(prefs.getString(KEY_PROVIDER, "alibaba") ?: "alibaba")
+        APIProvider.fromId(prefs.getString(KEY_PROVIDER, "openrouter") ?: "openrouter")
     )
     val currentProvider: StateFlow<APIProvider> = _currentProvider
 
     private val _selectedModel = MutableStateFlow(
-        prefs.getString(KEY_SELECTED_MODEL, null) ?: APIProvider.ALIBABA.defaultModel
+        prefs.getString(KEY_SELECTED_MODEL, null) ?: APIProvider.OPENROUTER.defaultModel
     )
     val selectedModel: StateFlow<String> = _selectedModel
 
@@ -419,7 +419,7 @@ class APIProviderManager private constructor(context: Context) {
 
         val apiKey = apiKeyManager.getAPIKey(APIProvider.OPENROUTER)
         if (apiKey.isNullOrEmpty()) {
-            _modelsError.value = "请先配置 OpenRouter API Key"
+            _modelsError.value = "Please configure OpenRouter API Key first"
             return
         }
 
@@ -438,7 +438,7 @@ class APIProviderManager private constructor(context: Context) {
                 val response = httpClient.newCall(request).execute()
 
                 if (!response.isSuccessful) {
-                    _modelsError.value = "获取模型列表失败: ${response.code}"
+                    _modelsError.value = "Failed to fetch model list: ${response.code}"
                     return@withContext
                 }
 

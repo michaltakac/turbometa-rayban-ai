@@ -1,6 +1,6 @@
 /*
  * Live AI Intent
- * App Intent - 支持 Siri 和快捷指令触发 Live AI（后台运行，无需解锁）
+ * App Intent - Supports Siri and Shortcuts to trigger Live AI (runs in background, no unlock needed)
  */
 
 import AppIntents
@@ -10,16 +10,16 @@ import UIKit
 
 @available(iOS 16.0, *)
 struct LiveAIIntent: AppIntent {
-    static var title: LocalizedStringResource = "实时对话"
-    static var description = IntentDescription("启动实时多模态对话")
-    // 必须打开 App，因为 iOS 后台录音有系统限制
+    static var title: LocalizedStringResource = "Live Conversation"
+    static var description = IntentDescription("Start a live multimodal conversation")
+    // Must open the app because iOS has system restrictions on background recording
     static var openAppWhenRun: Bool = true
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // 发送通知让 App 自动打开 Live AI 界面
+        // Send notification to have the app automatically open the Live AI interface
         NotificationCenter.default.post(name: .liveAITriggered, object: nil)
-        return .result(dialog: "正在启动实时对话...")
+        return .result(dialog: "Starting live conversation...")
     }
 }
 
@@ -27,8 +27,8 @@ struct LiveAIIntent: AppIntent {
 
 @available(iOS 16.0, *)
 struct StopLiveAIIntent: AppIntent {
-    static var title: LocalizedStringResource = "停止实时对话"
-    static var description = IntentDescription("停止正在运行的实时对话")
+    static var title: LocalizedStringResource = "Stop Live Conversation"
+    static var description = IntentDescription("Stop the running live conversation")
     static var openAppWhenRun: Bool = false
 
     @MainActor
@@ -37,9 +37,9 @@ struct StopLiveAIIntent: AppIntent {
 
         if manager.isRunning {
             await manager.stopSession()
-            return .result(dialog: "Live AI 已停止")
+            return .result(dialog: "Live AI stopped")
         } else {
-            return .result(dialog: "Live AI 未在运行")
+            return .result(dialog: "Live AI is not running")
         }
     }
 }
